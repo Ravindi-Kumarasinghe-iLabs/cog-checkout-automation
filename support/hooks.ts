@@ -1,5 +1,5 @@
 import { After, Before, setDefaultTimeout, Status } from "@cucumber/cucumber";
-import { chromium, firefox, webkit, type BrowserType } from "playwright";
+import { chromium, devices, firefox, webkit, type BrowserType } from "playwright";
 import { testEnv } from "./env";
 import type { CustomWorld } from "./world";
 
@@ -13,12 +13,16 @@ setDefaultTimeout(testEnv.defaultTimeoutMs);
 
 Before(async function (this: CustomWorld) {
   const browserType = browserTypes[testEnv.browser] ?? chromium;
-
-  this.browser = await browserType.launch({
+  const launchOptions = {
     headless: testEnv.headless,
-  });
+    channel: testEnv.browserChannel,
+  };
+  const mobileDevice = testEnv.browser === "webkit" ? devices["iPhone 13"] : devices["Pixel 5"];
+  const contextOptions = testEnv.device === "mobile" ? mobileDevice : {};
 
-  this.context = await this.browser.newContext();
+  this.browser = await browserType.launch(launchOptions);
+
+  this.context = await this.browser.newContext(contextOptions);
   this.page = await this.context.newPage();
   this.page.setDefaultTimeout(testEnv.defaultTimeoutMs);
 });

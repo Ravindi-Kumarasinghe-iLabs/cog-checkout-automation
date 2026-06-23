@@ -19,6 +19,8 @@ const toNumber = (value: string | undefined, defaultValue: number): number => {
 export const testEnv = {
   baseUrl: process.env.BASE_URL ?? "https://cog-stg.incubatelabs.com",
   browser: process.env.BROWSER ?? "chromium",
+  browserChannel: process.env.BROWSER_CHANNEL,
+  device: process.env.DEVICE ?? "desktop",
   headless: toBoolean(process.env.HEADLESS, false),
   defaultTimeoutMs: toNumber(process.env.DEFAULT_TIMEOUT_MS, 30000),
 };
