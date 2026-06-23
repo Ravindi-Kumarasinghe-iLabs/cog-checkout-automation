@@ -110,7 +110,7 @@ export class CheckoutPage extends BasePage {
     await this.deliveryAddressInput.focus();
 
     for (const chunk of address.match(/.{1,5}/g) ?? []) {
-      await this.page.keyboard.type(chunk, { delay: 150 });
+      await this.page.keyboard.type(chunk, { delay: 250 });
       typedCharacters += chunk.length;
 
       const dropdownLoaded = await this.isAutocompleteDropdownLoaded();
@@ -119,7 +119,7 @@ export class CheckoutPage extends BasePage {
         provider = await this.getMapDropdownProvider();
       }
 
-      if (typedCharacters >= 10 && (await this.getAddressSuggestion(address).isVisible({ timeout: 500 }).catch(() => false))) {
+      if (typedCharacters >= 10 && (await this.getAddressSuggestion(address).isVisible({ timeout: 1000 }).catch(() => false))) {
         return provider ?? this.getMapDropdownProvider();
       }
     }
@@ -137,7 +137,7 @@ export class CheckoutPage extends BasePage {
     return this.page
       .locator("#delivery_location-autocomplete-list div, .pac-container .pac-item, [role='option']")
       .first()
-      .isVisible({ timeout: 500 })
+      .isVisible({ timeout: 1000 })
       .catch(() => false);
   }
 
@@ -158,7 +158,7 @@ export class CheckoutPage extends BasePage {
   private async getSelectableAddressSuggestion(address: string): Promise<Locator> {
     const exactAddressSuggestion = this.getAddressSuggestion(address);
 
-    if (await exactAddressSuggestion.isVisible({ timeout: 1000 }).catch(() => false)) {
+    if (await exactAddressSuggestion.isVisible({ timeout: 3000 }).catch(() => false)) {
       return exactAddressSuggestion;
     }
 

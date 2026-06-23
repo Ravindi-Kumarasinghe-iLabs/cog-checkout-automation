@@ -32,3 +32,11 @@ Feature: Cloud of Goods checkout order placement
     When I enter and select "Universal Studios Florida, Universal Boulevard, Orlando, FL, USA" as the delivery address
     Then the delivery address "Universal Studios Florida, Universal Boulevard, Orlando, FL, USA" should be selected successfully
     And the rental period date picker should be displayed
+
+  @checkout @delivery-address @DA-004
+  Scenario: DA-004 Verify user can enter and select a valid blacklisted hotel delivery address successfully
+    Given I open the checkout page with Lightweight Mobility Scooter in the cart
+    Then the delivery address section should be displayed
+    When I enter and select "Golden Gate Hotel and Casino, Fremont Street, Las Vegas, NV, USA" as the delivery address
+    Then the delivery address "Golden Gate Hotel and Casino, Fremont Street, Las Vegas, NV, USA" should be selected successfully
+    And the rental period date picker should be displayed
