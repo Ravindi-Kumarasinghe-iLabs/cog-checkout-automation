@@ -6,6 +6,7 @@
   "scripts": {
     "test": "cucumber-js",
     "test:local": "cucumber-js --profile default --profile local",
+    "test:product-cart": "cucumber-js --profile default --profile productCart",
     "test:dry-run": "cucumber-js --profile default --profile dryRun",
     "typecheck": "tsc --noEmit"
   },

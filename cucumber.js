@@ -13,8 +13,10 @@ module.exports = {
   },
   dryRun: {
     dryRun: true,
-    tags: "@smoke",
     format: ["progress"],
     forceExit: true,
+  },
+  productCart: {
+    tags: "@product-cart",
   },
 };
