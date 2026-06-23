@@ -18,7 +18,7 @@ Before(async function (this: CustomWorld, scenario) {
     headless: testEnv.headless,
     channel: testEnv.browserChannel,
   };
-  const mobileDevice = testEnv.browser === "webkit" ? devices["iPhone 13"] : devices["Pixel 5"];
+  const mobileDevice = testEnv.browser === "webkit" ? devices["iPhone 15 Pro Max"] : devices["Pixel 5"];
   const contextOptions = testEnv.testEnvironment === "browserstack" ? {} : testEnv.device === "mobile" ? mobileDevice : {};
 
   this.browser =

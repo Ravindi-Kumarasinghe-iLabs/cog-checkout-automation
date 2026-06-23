@@ -17,7 +17,7 @@ export class ProductPage extends BasePage {
       const headingText = await this.page
         .locator("h1")
         .first()
-        .textContent({ timeout: 30000 })
+        .textContent({ timeout: getActiveTimeoutMs() })
         .catch(() => "");
 
       expect(headingText).toMatch(/Rent Equipment/i);
@@ -79,7 +79,7 @@ export class ProductPage extends BasePage {
   }
 
   private async scrollUntilVisible(locator: Locator): Promise<void> {
-    for (let attempt = 0; attempt < 10; attempt += 1) {
+    for (let attempt = 0; attempt < 20; attempt += 1) {
       if (await locator.isVisible({ timeout: 1000 }).catch(() => false)) {
         await locator.scrollIntoViewIfNeeded();
         return;

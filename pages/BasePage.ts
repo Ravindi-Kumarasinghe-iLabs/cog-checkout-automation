@@ -57,12 +57,12 @@ export class BasePage {
     const body = this.page.locator("body");
     await body.waitFor({
       state: "attached",
-      timeout: 30000,
+      timeout: getActiveTimeoutMs(),
     });
 
     const bodyText = await body
       .innerText({
-        timeout: 10000,
+        timeout: Math.min(getActiveTimeoutMs(), 30000),
       })
       .catch(() => "");
 
@@ -80,7 +80,7 @@ export class BasePage {
 
     await this.page.locator("body").waitFor({
       state: "attached",
-      timeout: 30000,
+      timeout: getActiveTimeoutMs(),
     });
 
     await this.expectNoServerError();

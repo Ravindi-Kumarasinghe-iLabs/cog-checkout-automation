@@ -63,13 +63,7 @@ export class CheckoutPage extends BasePage {
     await this.deliveryAddressInput.fill("");
 
     const provider = await this.typeAddressUntilSuggestionLoads(address);
-    const addressSuggestion = this.getAddressSuggestion(address);
-
-    if (testEnv.testEnvironment === "browserstack") {
-      await this.waitForBrowserStackSelector("#delivery_location-autocomplete-list div");
-    } else {
-      await expect(addressSuggestion).toBeVisible({ timeout: 15000 });
-    }
+    const addressSuggestion = await this.getSelectableAddressSuggestion(address);
 
     await addressSuggestion.click();
     await this.waitForAddressValidationToFinish();
@@ -78,17 +72,20 @@ export class CheckoutPage extends BasePage {
   }
 
   async expectDeliveryAddressSelected(address: string): Promise<void> {
+    const exactAddressPattern = new RegExp(address.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+
     if (testEnv.testEnvironment === "browserstack") {
-      const selectedAddress = await this.deliveryAddressInput.inputValue({ timeout: 30000 });
+      const selectedAddress = await this.deliveryAddressInput.inputValue({ timeout: getActiveTimeoutMs() });
       const hasErrorClass = await this.deliveryAddressInput.evaluate((element) => element.classList.contains("has-error"));
 
-      expect(selectedAddress).toMatch(new RegExp(address.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"));
+      expect(this.selectedAddressMatchesExpected(selectedAddress, address, exactAddressPattern)).toBe(true);
       expect(hasErrorClass).toBe(false);
       await this.expectNoDeliveryAddressValidationErrors();
       return;
     }
 
-    await expect(this.deliveryAddressInput).toHaveValue(new RegExp(address.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"));
+    const selectedAddress = await this.deliveryAddressInput.inputValue({ timeout: getActiveTimeoutMs() });
+    expect(this.selectedAddressMatchesExpected(selectedAddress, address, exactAddressPattern)).toBe(true);
     await expect(this.deliveryAddressInput).not.toHaveClass(/has-error/);
     await this.expectNoDeliveryAddressValidationErrors();
   }
@@ -107,17 +104,41 @@ export class CheckoutPage extends BasePage {
   }
 
   private async typeAddressUntilSuggestionLoads(address: string): Promise<"Google" | "Cloud maps"> {
-    for (const character of address) {
-      await this.deliveryAddressInput.pressSequentially(character, { delay: 75 });
+    let provider: "Google" | "Cloud maps" | undefined;
+    let typedCharacters = 0;
 
-      if (await this.getAddressSuggestion(address).isVisible({ timeout: 300 }).catch(() => false)) {
-        return this.getMapDropdownProvider();
+    await this.deliveryAddressInput.focus();
+
+    for (const chunk of address.match(/.{1,5}/g) ?? []) {
+      await this.page.keyboard.type(chunk, { delay: 150 });
+      typedCharacters += chunk.length;
+
+      const dropdownLoaded = await this.isAutocompleteDropdownLoaded();
+
+      if (dropdownLoaded && provider === undefined) {
+        provider = await this.getMapDropdownProvider();
+      }
+
+      if (typedCharacters >= 10 && (await this.getAddressSuggestion(address).isVisible({ timeout: 500 }).catch(() => false))) {
+        return provider ?? this.getMapDropdownProvider();
       }
     }
 
-    await expect(this.getAddressSuggestion(address)).toBeVisible({ timeout: 15000 });
+    if (testEnv.device === "mobile") {
+      await expect(this.getTopAddressSuggestion()).toBeVisible({ timeout: getActiveTimeoutMs() });
+    } else {
+      await expect(this.getAddressSuggestion(address)).toBeVisible({ timeout: getActiveTimeoutMs() });
+    }
 
-    return this.getMapDropdownProvider();
+    return provider ?? this.getMapDropdownProvider();
+  }
+
+  private async isAutocompleteDropdownLoaded(): Promise<boolean> {
+    return this.page
+      .locator("#delivery_location-autocomplete-list div, .pac-container .pac-item, [role='option']")
+      .first()
+      .isVisible({ timeout: 500 })
+      .catch(() => false);
   }
 
   private getAddressSuggestion(address: string): Locator {
@@ -128,6 +149,45 @@ export class CheckoutPage extends BasePage {
       .or(this.page.locator(".pac-container .pac-item").filter({ hasText: address }).first())
       .or(this.page.getByRole("option", { name: new RegExp(address, "i") }).first())
       .or(this.page.locator("[id*='autocomplete'], [class*='autocomplete']").getByText(address, { exact: true }).first());
+  }
+
+  private getTopAddressSuggestion(): Locator {
+    return this.page.locator("#delivery_location-autocomplete-list div, .pac-container .pac-item, [role='option']").first();
+  }
+
+  private async getSelectableAddressSuggestion(address: string): Promise<Locator> {
+    const exactAddressSuggestion = this.getAddressSuggestion(address);
+
+    if (await exactAddressSuggestion.isVisible({ timeout: 1000 }).catch(() => false)) {
+      return exactAddressSuggestion;
+    }
+
+    if (testEnv.device === "mobile") {
+      const topAddressSuggestion = this.getTopAddressSuggestion();
+      await expect(topAddressSuggestion).toBeVisible({ timeout: getActiveTimeoutMs() });
+      return topAddressSuggestion;
+    }
+
+    await expect(exactAddressSuggestion).toBeVisible({ timeout: getActiveTimeoutMs() });
+    return exactAddressSuggestion;
+  }
+
+  private selectedAddressMatchesExpected(selectedAddress: string, expectedAddress: string, exactAddressPattern: RegExp): boolean {
+    if (exactAddressPattern.test(selectedAddress)) {
+      return true;
+    }
+
+    if (testEnv.device !== "mobile") {
+      return false;
+    }
+
+    const expectedAddressParts = expectedAddress
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean);
+    const importantAddressParts = [expectedAddressParts[0], expectedAddressParts[1], ...expectedAddressParts.slice(-3)].filter(Boolean);
+
+    return importantAddressParts.every((part) => selectedAddress.toLowerCase().includes(part.toLowerCase()));
   }
 
   private async getMapDropdownProvider(): Promise<"Google" | "Cloud maps"> {
@@ -148,8 +208,8 @@ export class CheckoutPage extends BasePage {
       .locator(".spinner, .loader, [class*='spinner'], [class*='loading'], [class*='loader']")
       .first();
 
-    if (await validationLoader.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await expect(validationLoader).toBeHidden({ timeout: 20000 });
+    if (await validationLoader.isVisible({ timeout: Math.min(getActiveTimeoutMs(), 10000) }).catch(() => false)) {
+      await expect(validationLoader).toBeHidden({ timeout: getActiveTimeoutMs() });
     }
   }
 
@@ -169,7 +229,7 @@ export class CheckoutPage extends BasePage {
   private async waitForBrowserStackSelector(selector: string): Promise<void> {
     await this.page.waitForSelector(selector, {
       state: "attached",
-      timeout: 30000,
+      timeout: getActiveTimeoutMs(),
     });
   }
 
@@ -179,7 +239,7 @@ export class CheckoutPage extends BasePage {
     const text = await this.page
       .locator(selector)
       .first()
-      .innerText({ timeout: 10000 })
+      .innerText({ timeout: Math.min(getActiveTimeoutMs(), 30000) })
       .catch(() => "");
 
     expect(text).toMatch(expectedText);

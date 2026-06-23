@@ -22,6 +22,12 @@ module.exports = {
   deliveryAddress: {
     tags: "@DA-001",
   },
+  airportDeliveryAddress: {
+    tags: "@DA-002",
+  },
+  attractionDeliveryAddress: {
+    tags: "@DA-003",
+  },
   browserStack: {
     parallel: 1,
   },
