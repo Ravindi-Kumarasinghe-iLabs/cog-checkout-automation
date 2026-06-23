@@ -1,5 +1,5 @@
 import { expect } from "@playwright/test";
-import { testEnv } from "../support/env";
+import { getActiveTimeoutMs, testEnv } from "../support/env";
 import { BasePage } from "./BasePage";
 
 export class HomePage extends BasePage {
@@ -28,7 +28,10 @@ export class HomePage extends BasePage {
     }
 
     await Promise.all([
-      this.page.waitForURL(/\/product-rentals\/all/, { timeout: 30000 }),
+      this.page.waitForURL(/\/product-rentals\/all/, {
+        timeout: getActiveTimeoutMs(),
+        waitUntil: "domcontentloaded",
+      }),
       this.browseAllLink.click(),
     ]);
   }
