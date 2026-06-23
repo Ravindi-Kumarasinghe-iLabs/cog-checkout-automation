@@ -7,6 +7,11 @@
     "test": "cucumber-js",
     "test:local": "cucumber-js --profile default --profile local",
     "test:product-cart": "cucumber-js --profile default --profile productCart",
+    "test:product-cart:chrome-desktop": "cross-env HEADLESS=false BROWSER=chromium BROWSER_CHANNEL=chrome DEVICE=desktop cucumber-js --profile default --profile productCart",
+    "test:product-cart:chrome-mobile": "cross-env HEADLESS=false BROWSER=chromium BROWSER_CHANNEL=chrome DEVICE=mobile cucumber-js --profile default --profile productCart",
+    "test:product-cart:safari-desktop": "cross-env HEADLESS=false BROWSER=webkit DEVICE=desktop cucumber-js --profile default --profile productCart",
+    "test:product-cart:safari-mobile": "cross-env HEADLESS=false BROWSER=webkit DEVICE=mobile cucumber-js --profile default --profile productCart",
+    "test:product-cart:all-headed": "npm run test:product-cart:chrome-desktop && npm run test:product-cart:chrome-mobile && npm run test:product-cart:safari-desktop && npm run test:product-cart:safari-mobile",
     "test:dry-run": "cucumber-js --profile default --profile dryRun",
     "typecheck": "tsc --noEmit"
   },
