@@ -19,4 +19,7 @@ module.exports = {
   productCart: {
     tags: "@product-cart",
   },
+  deliveryAddress: {
+    tags: "@DA-001",
+  },
 };
