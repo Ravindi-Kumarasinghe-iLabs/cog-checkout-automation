@@ -22,4 +22,7 @@ module.exports = {
   deliveryAddress: {
     tags: "@DA-001",
   },
+  browserStack: {
+    parallel: 1,
+  },
 };

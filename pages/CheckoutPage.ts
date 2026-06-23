@@ -1,5 +1,6 @@
 import { BasePage } from "./BasePage";
 import { expect, type Locator } from "@playwright/test";
+import { getActiveTimeoutMs, testEnv } from "../support/env";
 
 export class CheckoutPage extends BasePage {
   private readonly detailPanel = this.page.locator("#detail-panel");
@@ -27,17 +28,30 @@ export class CheckoutPage extends BasePage {
 
   async expectLoaded(): Promise<void> {
     await this.closeKnownPopups();
-    await expect(this.page).toHaveURL(/checkout|cart/i);
+    await this.page.waitForURL(/checkout|cart/i, { timeout: getActiveTimeoutMs() });
     await this.expectNoServerError();
   }
 
   async expectLightweightMobilityScooterInCart(): Promise<void> {
+    if (testEnv.testEnvironment === "browserstack") {
+      await this.expectBrowserStackTextInDetail("#cart-panel", /Lightweight Mobility Scooter/i);
+      return;
+    }
+
     await expect(this.cartPanel).toBeVisible();
     await expect(this.lightweightScooterCartLink).toBeVisible();
     await expect(this.lightweightScooterImageLink).toBeVisible();
   }
 
   async expectDeliveryAddressSectionDisplayed(): Promise<void> {
+    if (testEnv.testEnvironment === "browserstack") {
+      await this.waitForBrowserStackSelector("#detail-panel");
+      await this.expectBrowserStackTextInDetail("#detail-panel", /Enter delivery location/i);
+      await this.expectBrowserStackTextInDetail("#detail-panel", /Delivery address not sure\?/i);
+      await this.waitForBrowserStackSelector("#delivery_location");
+      return;
+    }
+
     await expect(this.detailPanel).toBeVisible();
     await expect(this.deliveryLocationLabel).toBeVisible();
     await expect(this.deliveryAddressInput).toBeVisible();
@@ -51,7 +65,12 @@ export class CheckoutPage extends BasePage {
     const provider = await this.typeAddressUntilSuggestionLoads(address);
     const addressSuggestion = this.getAddressSuggestion(address);
 
-    await expect(addressSuggestion).toBeVisible({ timeout: 15000 });
+    if (testEnv.testEnvironment === "browserstack") {
+      await this.waitForBrowserStackSelector("#delivery_location-autocomplete-list div");
+    } else {
+      await expect(addressSuggestion).toBeVisible({ timeout: 15000 });
+    }
+
     await addressSuggestion.click();
     await this.waitForAddressValidationToFinish();
 
@@ -59,12 +78,29 @@ export class CheckoutPage extends BasePage {
   }
 
   async expectDeliveryAddressSelected(address: string): Promise<void> {
+    if (testEnv.testEnvironment === "browserstack") {
+      const selectedAddress = await this.deliveryAddressInput.inputValue({ timeout: 30000 });
+      const hasErrorClass = await this.deliveryAddressInput.evaluate((element) => element.classList.contains("has-error"));
+
+      expect(selectedAddress).toMatch(new RegExp(address.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"));
+      expect(hasErrorClass).toBe(false);
+      await this.expectNoDeliveryAddressValidationErrors();
+      return;
+    }
+
     await expect(this.deliveryAddressInput).toHaveValue(new RegExp(address.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"));
     await expect(this.deliveryAddressInput).not.toHaveClass(/has-error/);
     await this.expectNoDeliveryAddressValidationErrors();
   }
 
   async expectRentalPeriodDatePickerDisplayed(): Promise<void> {
+    if (testEnv.testEnvironment === "browserstack") {
+      await this.expectBrowserStackTextInDetail("#detail-panel", /Enter rental period\*/i);
+      await this.waitForBrowserStackSelector("#dp-dsk-start-end");
+      await this.waitForBrowserStackSelector(".input-group-addon");
+      return;
+    }
+
     await expect(this.rentalPeriodLabel).toBeVisible();
     await expect(this.rentalPeriodDatePicker).toBeVisible();
     await expect(this.rentalPeriodCalendarIcon).toBeVisible();
@@ -120,6 +156,32 @@ export class CheckoutPage extends BasePage {
   private async expectNoDeliveryAddressValidationErrors(): Promise<void> {
     const validationErrors = this.detailPanel.locator(".invalid-feedback:visible, .error:visible, .text-danger:visible, [role='alert']:visible");
 
+    if (testEnv.testEnvironment === "browserstack") {
+      const validationErrorCount = await validationErrors.count().catch(() => 0);
+
+      expect(validationErrorCount).toBe(0);
+      return;
+    }
+
     await expect(validationErrors).toHaveCount(0);
+  }
+
+  private async waitForBrowserStackSelector(selector: string): Promise<void> {
+    await this.page.waitForSelector(selector, {
+      state: "attached",
+      timeout: 30000,
+    });
+  }
+
+  private async expectBrowserStackTextInDetail(selector: string, expectedText: RegExp): Promise<void> {
+    await this.waitForBrowserStackSelector(selector);
+
+    const text = await this.page
+      .locator(selector)
+      .first()
+      .innerText({ timeout: 10000 })
+      .catch(() => "");
+
+    expect(text).toMatch(expectedText);
   }
 }

@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from "@playwright/test";
+import { getActiveTimeoutMs } from "../support/env";
 
 export class BasePage {
   protected readonly page: Page;
@@ -53,13 +54,34 @@ export class BasePage {
   }
 
   async expectNoServerError(): Promise<void> {
-    await expect(this.page.locator("body")).not.toContainText(/\b(404|502|bad gateway)\b/i);
+    const body = this.page.locator("body");
+    await body.waitFor({
+      state: "attached",
+      timeout: 30000,
+    });
+
+    const bodyText = await body
+      .innerText({
+        timeout: 10000,
+      })
+      .catch(() => "");
+
+    expect(bodyText).not.toMatch(/\b(404|502|bad gateway)\b/i);
   }
 
   protected async expectSuccessfulPageLoad(status?: number): Promise<void> {
     if (status !== undefined) {
       expect(status).toBeLessThan(400);
     }
+
+    await this.page.waitForLoadState("domcontentloaded", {
+      timeout: getActiveTimeoutMs(),
+    });
+
+    await this.page.locator("body").waitFor({
+      state: "attached",
+      timeout: 30000,
+    });
 
     await this.expectNoServerError();
   }

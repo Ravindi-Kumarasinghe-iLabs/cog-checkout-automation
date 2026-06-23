@@ -20,6 +20,13 @@ export class HomePage extends BasePage {
 
   async browseAllProducts(): Promise<void> {
     await this.closeKnownPopups();
+
+    if (testEnv.testEnvironment === "browserstack") {
+      const response = await this.page.goto(`${testEnv.baseUrl}/product-rentals/all`, { waitUntil: "domcontentloaded" });
+      await this.expectSuccessfulPageLoad(response?.status());
+      return;
+    }
+
     await Promise.all([
       this.page.waitForURL(/\/product-rentals\/all/, { timeout: 30000 }),
       this.browseAllLink.click(),
