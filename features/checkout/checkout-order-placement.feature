@@ -7,11 +7,12 @@ Feature: Cloud of Goods checkout order placement
 
   @checkout @product-cart
   Scenario: Add Lightweight Mobility Scooter to cart and open checkout
-    Given I open the Cloud of Goods staging home page
-    Then the Cloud of Goods home page should be displayed
-    When I browse all product rentals
-    Then the product rentals all page should be displayed
-    And the Lightweight Mobility Scooter should be listed
-    When I book the Lightweight Mobility Scooter
-    Then the checkout page should be displayed
-    And the checkout cart should contain the Lightweight Mobility Scooter
+    Given I open the checkout page with Lightweight Mobility Scooter in the cart
+
+  @checkout @delivery-address @DA-001
+  Scenario: DA-001 Select a valid locality delivery address successfully
+    Given I open the checkout page with Lightweight Mobility Scooter in the cart
+    Then the delivery address section should be displayed
+    When I enter and select "Orlando, FL, USA" as the delivery address
+    Then the delivery address "Orlando, FL, USA" should be selected successfully
+    And the rental period date picker should be displayed
