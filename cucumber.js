@@ -28,6 +28,9 @@ module.exports = {
   attractionDeliveryAddress: {
     tags: "@DA-003",
   },
+  blacklistedHotelDeliveryAddress: {
+    tags: "@DA-004",
+  },
   browserStack: {
     parallel: 1,
   },
