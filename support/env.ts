@@ -18,9 +18,18 @@ const toNumber = (value: string | undefined, defaultValue: number): number => {
 
 export const testEnv = {
   baseUrl: process.env.BASE_URL ?? "https://cog-stg.incubatelabs.com",
+  testEnvironment: process.env.TEST_ENV ?? "local",
   browser: process.env.BROWSER ?? "chromium",
   browserChannel: process.env.BROWSER_CHANNEL,
   device: process.env.DEVICE ?? "desktop",
   headless: toBoolean(process.env.HEADLESS, false),
   defaultTimeoutMs: toNumber(process.env.DEFAULT_TIMEOUT_MS, 30000),
+  browserStackTimeoutMs: toNumber(process.env.BROWSERSTACK_TIMEOUT_MS, 180000),
+  browserStackUsername: process.env.BROWSERSTACK_USERNAME,
+  browserStackAccessKey: process.env.BROWSERSTACK_ACCESS_KEY,
+  browserStackBuildName: process.env.BROWSERSTACK_BUILD_NAME ?? "COG Checkout Automation",
+  browserStackProjectName: process.env.BROWSERSTACK_PROJECT_NAME ?? "Cloud of Goods Checkout",
 };
+
+export const getActiveTimeoutMs = (): number =>
+  testEnv.testEnvironment === "browserstack" ? testEnv.browserStackTimeoutMs : testEnv.defaultTimeoutMs;
