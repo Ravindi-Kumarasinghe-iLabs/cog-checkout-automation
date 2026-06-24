@@ -310,6 +310,25 @@ export class CheckoutPage extends BasePage {
     await this.page.locator(todaySelector).click();
   }
 
+  async doubleTapTodayDateInDatePicker(): Promise<void> {
+    const calendarSelector = testEnv.device === "mobile" ? "#calendarContainer" : "#custRangePicketDekstopCalendarPopup";
+    const today = new Date();
+    const todaySelector = `${calendarSelector} [data-date="${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}"]`;
+
+    if (testEnv.testEnvironment === "browserstack") {
+      await this.page.waitForSelector(todaySelector, {
+        state: "visible",
+        timeout: Math.min(getActiveTimeoutMs(), 30000),
+      });
+      await this.page.locator(todaySelector).click({ force: true, timeout: Math.min(getActiveTimeoutMs(), 30000) });
+      await this.page.locator(todaySelector).click({ force: true, timeout: Math.min(getActiveTimeoutMs(), 30000) });
+      return;
+    }
+
+    await this.page.locator(todaySelector).click();
+    await this.page.locator(todaySelector).click();
+  }
+
   async clickDoneButtonInDatePicker(): Promise<void> {
     const calendarSelector = testEnv.device === "mobile" ? "#bottomSheet" : "#custRangePicketDekstopCalendarPopup";
     const doneButton = this.page.locator(`${calendarSelector} .cust-range-picker-done-button`);

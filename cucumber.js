@@ -64,6 +64,9 @@ module.exports = {
   singleDayRental: {
     tags: "@RP-005",
   },
+  doubleTapSingleDayRental: {
+    tags: "@RP-006",
+  },
   browserStack: {
     parallel: 1,
   },

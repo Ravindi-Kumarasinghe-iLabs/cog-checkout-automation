@@ -201,6 +201,12 @@ When("I tap today's date in the date picker", async function (this: CustomWorld)
   await checkoutPage.clickTodayDateInDatePicker();
 });
 
+When("I double tap today's date in the date picker", async function (this: CustomWorld) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  await checkoutPage.doubleTapTodayDateInDatePicker();
+});
+
 When("I click the Done button in the date picker", async function (this: CustomWorld) {
   const checkoutPage = new CheckoutPage(this.page);
 
