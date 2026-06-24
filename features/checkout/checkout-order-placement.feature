@@ -170,6 +170,55 @@ Feature: Cloud of Goods checkout order placement
     And I click the Done button in the date picker
     Then the rental period field should show the selected future date as both the start and end date
 
+  @checkout @rental-period @RP-009
+  Scenario: RP-009 User should be able to select two different future dates as the rental start and end date
+    Given I open the Cloud of Goods staging home page
+    Then the Cloud of Goods home page should be displayed
+    When I browse all product rentals
+    Then the product rentals all page should be displayed
+    And the Lightweight Mobility Scooter should be listed
+    When I book the Lightweight Mobility Scooter
+    Then the checkout page should be displayed
+    And the delivery location label should be visible
+    When I enter "Orlando" as the delivery address
+    And I select "Orlando, FL, USA" from the address suggestions
+    When I click on the rental period field
+    Then the date picker should be displayed
+    When I navigate to the next month and select a future start date
+    And I select a later date as the rental end date
+    And I click the Done button in the date picker
+    Then the rental period field should show the selected future dates as start and end
+
+  @checkout @rental-period @RP-010
+  Scenario: RP-010 User should be able to change the selected rental period after entering it once
+    Given I open the Cloud of Goods staging home page
+    Then the Cloud of Goods home page should be displayed
+    When I browse all product rentals
+    Then the product rentals all page should be displayed
+    And the Lightweight Mobility Scooter should be listed
+    When I book the Lightweight Mobility Scooter
+    Then the checkout page should be displayed
+    And the delivery location label should be visible
+    When I enter "Orlando" as the delivery address
+    And I select "Orlando, FL, USA" from the address suggestions
+    When I click on the rental period field
+    Then the date picker should be displayed
+    When I tap today's date in the date picker
+    And I click the Done button in the date picker
+    Then the rental period field should show today as both the start and end date for "Orlando"
+    When I click on the rental period field
+    Then the date picker should be displayed
+    When I navigate to the next month and select a future start date
+    And I select a later date as the rental end date
+    And I click the Done button in the date picker
+    Then the rental period field should show the selected future dates as start and end
+
+  @checkout @navigationAndCart @NV-001
+  Scenario: NV-001 Verify the user is redirected to the Cloud of Goods home page when clicking the logo in the checkout header
+    Given I open the checkout page with Lightweight Mobility Scooter in the cart
+    When I click the Cloud of Goods logo in the checkout page header
+    Then the Cloud of Goods home page should be displayed
+    And the cart should indicate the rental item was abandoned
 
   @checkout @delivery-address @DA-004
   Scenario: DA-004 Verify user can enter and select a valid blacklisted hotel delivery address successfully

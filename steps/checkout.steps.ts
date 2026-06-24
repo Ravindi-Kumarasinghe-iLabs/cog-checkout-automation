@@ -29,6 +29,18 @@ Given("I open the checkout page with Lightweight Mobility Scooter in the cart", 
   await openCheckoutWithLightweightMobilityScooter(this);
 });
 
+When("I click the Cloud of Goods logo in the checkout page header", async function (this: CustomWorld) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  await checkoutPage.clickLogo();
+});
+
+Then("the cart should indicate the rental item was abandoned", async function (this: CustomWorld) {
+  const homePage = new HomePage(this.page);
+
+  await homePage.expectCartHasAbandonedItem();
+});
+
 Then("the Cloud of Goods home page should be displayed", async function (this: CustomWorld) {
   const homePage = new HomePage(this.page);
 
@@ -223,6 +235,24 @@ Then("the rental period field should show the selected future date as both the s
   const checkoutPage = new CheckoutPage(this.page);
 
   await checkoutPage.expectFutureDateAsBothStartAndEnd(this.selectedEndDate ?? "");
+});
+
+When("I navigate to the next month and select a future start date", async function (this: CustomWorld) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  this.selectedStartDate = await checkoutPage.selectFutureStartDate();
+});
+
+When("I select a later date as the rental end date", async function (this: CustomWorld) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  this.selectedEndDate = await checkoutPage.selectLaterEndDate();
+});
+
+Then("the rental period field should show the selected future dates as start and end", async function (this: CustomWorld) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  await checkoutPage.expectFutureStartAndEndDates(this.selectedStartDate ?? "", this.selectedEndDate ?? "");
 });
 
 Then(
