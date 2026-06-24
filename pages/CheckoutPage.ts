@@ -156,6 +156,39 @@ export class CheckoutPage extends BasePage {
     await expect(this.page.getByText(messagePattern).first()).toBeVisible({ timeout: getActiveTimeoutMs() });
   }
 
+  async expectRentalPeriodLabelVisible(): Promise<void> {
+    if (testEnv.testEnvironment === "browserstack") {
+      await this.waitForBrowserStackSelector("#detail-panel");
+      await this.expectBrowserStackTextInDetail("#detail-panel", /Enter rental period\*/i);
+      return;
+    }
+
+    await expect(this.rentalPeriodLabel).toBeVisible({ timeout: getActiveTimeoutMs() });
+  }
+
+  async clickRentalPeriodField(): Promise<void> {
+    if (testEnv.testEnvironment === "browserstack") {
+      await this.rentalPeriodDatePicker.click({ force: true, timeout: getActiveTimeoutMs() });
+      return;
+    }
+
+    await this.rentalPeriodDatePicker.click();
+  }
+
+  async expectDatePickerDisplayed(): Promise<void> {
+    const calendarSelector = testEnv.device === "mobile" ? "#calendarContainer" : "#custRangePicketDekstopCalendarPopup";
+
+    if (testEnv.testEnvironment === "browserstack") {
+      await this.page.waitForSelector(calendarSelector, {
+        state: "visible",
+        timeout: Math.min(getActiveTimeoutMs(), 30000),
+      });
+      return;
+    }
+
+    await expect(this.page.locator(calendarSelector)).toBeVisible({ timeout: getActiveTimeoutMs() });
+  }
+
   async expectRentalPeriodDatePickerDisplayed(): Promise<void> {
     if (testEnv.testEnvironment === "browserstack") {
       await this.expectBrowserStackTextInDetail("#detail-panel", /Enter rental period\*/i);
