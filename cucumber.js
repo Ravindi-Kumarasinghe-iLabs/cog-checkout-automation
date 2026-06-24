@@ -55,6 +55,9 @@ module.exports = {
   rentalPeriodDatePicker: {
     tags: "@RP-002",
   },
+  rentalPeriodCalendarIcon: {
+    tags: "@RP-003",
+  },
   browserStack: {
     parallel: 1,
   },

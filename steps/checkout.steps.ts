@@ -165,6 +165,12 @@ When("I click on the rental period field", async function (this: CustomWorld) {
   await checkoutPage.clickRentalPeriodField();
 });
 
+When("I click on the date picker icon", async function (this: CustomWorld) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  await checkoutPage.clickDatePickerIcon();
+});
+
 Then("the date picker should be displayed", async function (this: CustomWorld) {
   const checkoutPage = new CheckoutPage(this.page);
 
