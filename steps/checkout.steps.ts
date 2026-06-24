@@ -139,6 +139,12 @@ Then("both delivery and pickup address fields should validate without errors", a
   await checkoutPage.expectDeliveryAndPickupAddressValidationSuccessful();
 });
 
+Then("the pickup city mismatch validation should be displayed", async function (this: CustomWorld) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  await checkoutPage.expectPickupCityMismatchValidation();
+});
+
 Then("the rental period date picker should be displayed", async function (this: CustomWorld) {
   const checkoutPage = new CheckoutPage(this.page);
 
