@@ -58,6 +58,9 @@ module.exports = {
   rentalPeriodCalendarIcon: {
     tags: "@RP-003",
   },
+  pastDatesDisabled: {
+    tags: "@RP-004",
+  },
   browserStack: {
     parallel: 1,
   },
