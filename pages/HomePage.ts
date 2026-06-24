@@ -36,6 +36,26 @@ export class HomePage extends BasePage {
     ]);
   }
 
+  async expectCartHasAbandonedItem(): Promise<void> {
+    const cartCount = this.page.locator("#headerCartItemCount");
+
+    if (testEnv.testEnvironment === "browserstack") {
+      await this.page.waitForFunction(
+        () => {
+          const el = document.querySelector("#headerCartItemCount");
+          return el !== null && parseInt(el.textContent ?? "0") > 0;
+        },
+        undefined,
+        { timeout: Math.min(getActiveTimeoutMs(), 30000) },
+      );
+      return;
+    }
+
+    await expect(cartCount).toBeVisible({ timeout: getActiveTimeoutMs() });
+    const countText = await cartCount.textContent();
+    expect(parseInt(countText ?? "0")).toBeGreaterThan(0);
+  }
+
   async getHeaderText(): Promise<string | null> {
     return this.pageHeader.textContent();
   }

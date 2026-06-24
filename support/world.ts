@@ -5,6 +5,7 @@ export class CustomWorld extends World {
   browser!: Browser;
   context!: BrowserContext;
   page!: Page;
+  selectedStartDate?: string;
   selectedEndDate?: string;
 
   constructor(options: IWorldOptions) {

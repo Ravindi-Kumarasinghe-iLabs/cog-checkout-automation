@@ -67,6 +67,15 @@ module.exports = {
   doubleTapSingleDayRental: {
     tags: "@RP-006",
   },
+  navigationLogo: {
+    tags: "@NV-001",
+  },
+  changeRentalPeriod: {
+    tags: "@RP-010",
+  },
+  differentFutureDatesRental: {
+    tags: "@RP-009",
+  },
   sameFutureDateRental: {
     tags: "@RP-008",
   },
