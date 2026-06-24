@@ -175,6 +175,16 @@ export class CheckoutPage extends BasePage {
     await this.rentalPeriodDatePicker.click();
   }
 
+  async clickDatePickerIcon(): Promise<void> {
+    if (testEnv.testEnvironment === "browserstack") {
+      await this.rentalPeriodCalendarIcon.scrollIntoViewIfNeeded({ timeout: getActiveTimeoutMs() });
+      await this.rentalPeriodCalendarIcon.click({ force: true, timeout: getActiveTimeoutMs() });
+      return;
+    }
+
+    await this.rentalPeriodCalendarIcon.click();
+  }
+
   async expectDatePickerDisplayed(): Promise<void> {
     const calendarSelector = testEnv.device === "mobile" ? "#calendarContainer" : "#custRangePicketDekstopCalendarPopup";
 
