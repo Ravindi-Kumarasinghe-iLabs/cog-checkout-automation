@@ -293,6 +293,68 @@ export class CheckoutPage extends BasePage {
     }
   }
 
+  async clickTodayDateInDatePicker(): Promise<void> {
+    const calendarSelector = testEnv.device === "mobile" ? "#calendarContainer" : "#custRangePicketDekstopCalendarPopup";
+    const today = new Date();
+    const todaySelector = `${calendarSelector} [data-date="${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}"]`;
+
+    if (testEnv.testEnvironment === "browserstack") {
+      await this.page.waitForSelector(todaySelector, {
+        state: "visible",
+        timeout: Math.min(getActiveTimeoutMs(), 30000),
+      });
+      await this.page.locator(todaySelector).click({ force: true, timeout: Math.min(getActiveTimeoutMs(), 30000) });
+      return;
+    }
+
+    await this.page.locator(todaySelector).click();
+  }
+
+  async clickDoneButtonInDatePicker(): Promise<void> {
+    const calendarSelector = testEnv.device === "mobile" ? "#bottomSheet" : "#custRangePicketDekstopCalendarPopup";
+    const doneButton = this.page.locator(`${calendarSelector} .cust-range-picker-done-button`);
+
+    if (testEnv.testEnvironment === "browserstack") {
+      await doneButton.waitFor({ state: "visible", timeout: Math.min(getActiveTimeoutMs(), 30000) });
+      await doneButton.click({ force: true, timeout: Math.min(getActiveTimeoutMs(), 30000) });
+      return;
+    }
+
+    await doneButton.click();
+  }
+
+  async expectTodayAsStartAndEndDate(city: string): Promise<void> {
+    const { year, month, day } = this.getDeliveryCityLocalDateTime(city);
+    // Hidden inputs store date as MM/DD/YYYY
+    const expectedHiddenValue = `${String(month).padStart(2, "0")}/${String(day).padStart(2, "0")}/${year}`;
+
+    if (testEnv.testEnvironment === "browserstack") {
+      await this.page.waitForFunction(
+        (expected: string) => {
+          const start = (document.querySelector("#dp-dsk-start") as HTMLInputElement | null)?.value ?? "";
+          const end = (document.querySelector("#dp-dsk-end") as HTMLInputElement | null)?.value ?? "";
+          return start === expected && end === expected;
+        },
+        expectedHiddenValue,
+        { timeout: Math.min(getActiveTimeoutMs(), 30000) },
+      );
+      return;
+    }
+
+    // Verify hidden inputs have today's date (retries until value is set)
+    await expect(this.page.locator("#dp-dsk-start")).toHaveValue(expectedHiddenValue, {
+      timeout: getActiveTimeoutMs(),
+    });
+    await expect(this.page.locator("#dp-dsk-end")).toHaveValue(expectedHiddenValue, {
+      timeout: getActiveTimeoutMs(),
+    });
+
+    // Verify the visible rental period input is populated (retries until non-empty)
+    await expect(this.page.locator("#dp-dsk-start-end")).not.toHaveValue("", {
+      timeout: Math.min(getActiveTimeoutMs(), 15000),
+    });
+  }
+
   async expectRentalPeriodDatePickerDisplayed(): Promise<void> {
     if (testEnv.testEnvironment === "browserstack") {
       await this.expectBrowserStackTextInDetail("#detail-panel", /Enter rental period\*/i);

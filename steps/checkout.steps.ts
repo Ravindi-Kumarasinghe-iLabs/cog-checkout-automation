@@ -194,3 +194,24 @@ Then("future dates should be enabled in the date picker", async function (this: 
 
   await checkoutPage.expectFutureDatesEnabledInDatePicker();
 });
+
+When("I tap today's date in the date picker", async function (this: CustomWorld) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  await checkoutPage.clickTodayDateInDatePicker();
+});
+
+When("I click the Done button in the date picker", async function (this: CustomWorld) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  await checkoutPage.clickDoneButtonInDatePicker();
+});
+
+Then(
+  "the rental period field should show today as both the start and end date for {string}",
+  async function (this: CustomWorld, city: string) {
+    const checkoutPage = new CheckoutPage(this.page);
+
+    await checkoutPage.expectTodayAsStartAndEndDate(city);
+  },
+);
