@@ -17,6 +17,20 @@ Feature: Cloud of Goods checkout order placement
     Then the delivery address "Orlando, FL, USA" should be selected successfully
     And the rental period date picker should be displayed
 
+  @checkout @pickup-address @PA-001
+  Scenario: PA-001 Verify user can enter and select a different pickup address in the same city successfully
+    Given I open the checkout page with Lightweight Mobility Scooter in the cart
+    Then the delivery address section should be displayed
+    When I enter and select "Orlando, FL, USA" as the delivery address
+    Then the delivery address "Orlando, FL, USA" should be selected successfully
+    And the rental period date picker should be displayed
+    And the use same address checkbox should be displayed
+    When I uncheck the use same address checkbox
+    Then the pickup address field should be displayed
+    When I enter and select "Orlando Vineland Premium Outlets, Vineland Avenue, Orlando, FL, USA" as the pickup address
+    Then the pickup address "Orlando Vineland Premium Outlets, Vineland Avenue, Orlando, FL, USA" should be selected successfully
+    And both delivery and pickup address fields should validate without errors
+
   @checkout @delivery-address @DA-002
   Scenario: DA-002 Verify user can enter and select a valid airport delivery address successfully
     Given I open the checkout page with Lightweight Mobility Scooter in the cart
