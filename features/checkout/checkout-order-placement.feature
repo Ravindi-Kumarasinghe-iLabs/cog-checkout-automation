@@ -55,3 +55,31 @@ Feature: Cloud of Goods checkout order placement
     When I enter and select "Golden Gate Hotel and Casino, Fremont Street, Las Vegas, NV, USA" as the delivery address
     Then the delivery address "Golden Gate Hotel and Casino, Fremont Street, Las Vegas, NV, USA" should be selected successfully
     And the rental period date picker should be displayed
+
+  @checkout @delivery-address @DA-005
+  Scenario: DA-005 Verify delivery address dropdown selection validation appears in orange after typing one letter
+    Given I open the checkout page with Lightweight Mobility Scooter in the cart
+    Then the delivery address section should be displayed
+    When I type "O" in the delivery address field and click outside without selecting a dropdown address
+    Then the delivery address dropdown selection validation should be displayed
+
+  @checkout @delivery-address @DA-006
+  Scenario: DA-006 Verify delivery address dropdown selection validation appears after typing a partial address
+    Given I open the checkout page with Lightweight Mobility Scooter in the cart
+    Then the delivery address section should be displayed
+    When I type "Orla" in the delivery address field and click outside without selecting a dropdown address
+    Then the delivery address dropdown selection validation should be displayed
+
+  @checkout @delivery-address @DA-007
+  Scenario: DA-007 Verify delivery address dropdown selection validation appears after typing half or more of an address
+    Given I open the checkout page with Lightweight Mobility Scooter in the cart
+    Then the delivery address section should be displayed
+    When I type "Orlando Inter" in the delivery address field and click outside without selecting a dropdown address
+    Then the delivery address dropdown selection validation should be displayed
+
+  @checkout @delivery-address @DA-008
+  Scenario: DA-008 Verify delivery address dropdown selection validation appears after typing the full address
+    Given I open the checkout page with Lightweight Mobility Scooter in the cart
+    Then the delivery address section should be displayed
+    When I type "Orlando, FL, USA" in the delivery address field and click outside without selecting a dropdown address
+    Then the delivery address dropdown selection validation should be displayed

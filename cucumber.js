@@ -34,6 +34,18 @@ module.exports = {
   rentalPeriod: {
     tags: "@RP-001",
   },
+  deliveryAddressDropdownValidation: {
+    tags: "@DA-005",
+  },
+  partialDeliveryAddressDropdownValidation: {
+    tags: "@DA-006",
+  },
+  halfDeliveryAddressDropdownValidation: {
+    tags: "@DA-007",
+  },
+  fullDeliveryAddressDropdownValidation: {
+    tags: "@DA-008",
+  },
   browserStack: {
     parallel: 1,
   },

@@ -16,6 +16,7 @@ export class CheckoutPage extends BasePage {
     .filter({ hasText: "Enter delivery location" })
     .first();
   private readonly deliveryAddressHelpText = this.detailPanel.getByText("Delivery address not sure?");
+  private readonly deliveryAddressDropdownValidationMessage = this.detailPanel.getByText("Select a delivery address from the dropdown");
   private readonly deliveryAddressInput = this.detailPanel.getByRole("textbox", {
     name: "Address or name of the place",
     exact: true,
@@ -167,6 +168,31 @@ export class CheckoutPage extends BasePage {
     await expect(this.rentalPeriodCalendarIcon).toBeVisible();
   }
 
+  async typeDeliveryAddressAndBlurWithoutSelecting(value: string): Promise<void> {
+    await this.deliveryAddressInput.click();
+    await this.deliveryAddressInput.fill("");
+    await this.deliveryAddressInput.focus();
+    await this.page.keyboard.type(value, { delay: 250 });
+    await this.clickOutsideDeliveryAddressField();
+    await this.clickOutsideAgainIfAutocompleteDropdownIsVisible();
+  }
+
+  async expectDeliveryAddressDropdownSelectionValidation(): Promise<void> {
+    if (testEnv.testEnvironment === "browserstack") {
+      await this.expectDeliveryAddressDropdownSelectionValidationForBrowserStack();
+      return;
+    }
+
+    await expect(this.deliveryAddressDropdownValidationMessage).toBeVisible({ timeout: getActiveTimeoutMs() });
+    await expect(this.deliveryAddressHelpText).not.toBeVisible();
+
+    const validationColor = await this.deliveryAddressDropdownValidationMessage.evaluate((element) => getComputedStyle(element).color);
+    const inputBorderColor = await this.deliveryAddressInput.evaluate((element) => getComputedStyle(element).borderColor);
+
+    expect(this.cssColorMatches(validationColor, "#FFA500")).toBe(true);
+    expect(this.cssColorMatches(inputBorderColor, "#b94a48")).toBe(true);
+  }
+
   private async typeAddressUntilSuggestionLoads(address: string): Promise<"Google" | "Cloud maps"> {
     let provider: "Google" | "Cloud maps" | undefined;
     let typedCharacters = 0;
@@ -252,6 +278,123 @@ export class CheckoutPage extends BasePage {
     const importantAddressParts = [expectedAddressParts[0], expectedAddressParts[1], ...expectedAddressParts.slice(-3)].filter(Boolean);
 
     return importantAddressParts.every((part) => selectedAddress.toLowerCase().includes(part.toLowerCase()));
+  }
+
+  private cssColorMatches(actualColor: string, expectedHexColor: string): boolean {
+    return this.normalizeCssColor(actualColor) === this.normalizeCssColor(expectedHexColor);
+  }
+
+  private async clickOutsideDeliveryAddressField(): Promise<void> {
+    const inputBox = await this.deliveryAddressInput.boundingBox();
+
+    if (inputBox) {
+      const viewport = this.page.viewportSize();
+      const clickX = Math.min(inputBox.x + inputBox.width + 40, (viewport?.width ?? inputBox.x + inputBox.width + 40) - 20);
+      const clickY = inputBox.y + inputBox.height / 2;
+
+      await this.page.mouse.click(clickX, clickY);
+      return;
+    }
+
+    await this.detailPanel.click({ position: { x: 10, y: 10 }, timeout: getActiveTimeoutMs() });
+  }
+
+  private async waitForAutocompleteDropdownToClose(): Promise<void> {
+    await this.page
+      .waitForFunction(
+        () => {
+          const dropdowns = Array.from(
+            document.querySelectorAll<HTMLElement>("#delivery_location-autocomplete-list, .pac-container, [role='listbox']"),
+          );
+
+          return dropdowns.every((dropdown) => {
+            const styles = getComputedStyle(dropdown);
+
+            return styles.display === "none" || styles.visibility === "hidden" || dropdown.offsetParent === null;
+          });
+        },
+        undefined,
+        { timeout: getActiveTimeoutMs() },
+      )
+      .catch(() => {
+        // Some map providers keep an empty off-screen container mounted after blur.
+      });
+  }
+
+  private async clickOutsideAgainIfAutocompleteDropdownIsVisible(): Promise<void> {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      if (!(await this.isAutocompleteDropdownVisible())) {
+        return;
+      }
+
+      await this.clickOutsideDeliveryAddressField();
+      await this.waitForAutocompleteDropdownToClose();
+    }
+  }
+
+  private async isAutocompleteDropdownVisible(): Promise<boolean> {
+    return this.page.evaluate(() => {
+      const dropdowns = Array.from(
+        document.querySelectorAll<HTMLElement>("#delivery_location-autocomplete-list, .pac-container, [role='listbox']"),
+      );
+
+      return dropdowns.some((dropdown) => {
+        const styles = getComputedStyle(dropdown);
+
+        return styles.display !== "none" && styles.visibility !== "hidden" && dropdown.offsetParent !== null;
+      });
+    });
+  }
+
+  private async expectDeliveryAddressDropdownSelectionValidationForBrowserStack(): Promise<void> {
+    await this.page.waitForFunction(
+      () => document.body.textContent?.includes("Select a delivery address from the dropdown"),
+      undefined,
+      { timeout: getActiveTimeoutMs() },
+    );
+
+    const validationState = await this.page.evaluate(() => {
+      const findLeafElementByText = (text: string): HTMLElement | undefined => {
+        const elements = Array.from(document.querySelectorAll<HTMLElement>("#detail-panel *"));
+
+        return elements.find((element) => {
+          const containsText = element.textContent?.includes(text) ?? false;
+          const childContainsText = Array.from(element.children).some((child) => child.textContent?.includes(text));
+
+          return containsText && !childContainsText;
+        });
+      };
+      const validationElement = findLeafElementByText("Select a delivery address from the dropdown");
+      const helpElement = findLeafElementByText("Delivery address not sure?");
+      const inputElement = document.querySelector<HTMLInputElement>("#delivery_location");
+
+      return {
+        validationVisible: Boolean(validationElement && validationElement.offsetParent !== null),
+        validationColor: validationElement ? getComputedStyle(validationElement).color : "",
+        helpVisible: Boolean(helpElement && helpElement.offsetParent !== null),
+        inputBorderColor: inputElement ? getComputedStyle(inputElement).borderColor : "",
+      };
+    });
+
+    expect(validationState.validationVisible).toBe(true);
+    expect(validationState.helpVisible).toBe(false);
+    expect(this.cssColorMatches(validationState.validationColor, "#FFA500")).toBe(true);
+    expect(this.cssColorMatches(validationState.inputBorderColor, "#b94a48")).toBe(true);
+  }
+
+  private normalizeCssColor(color: string): string {
+    if (color.startsWith("#")) {
+      const hex = color.replace("#", "");
+      const red = Number.parseInt(hex.slice(0, 2), 16);
+      const green = Number.parseInt(hex.slice(2, 4), 16);
+      const blue = Number.parseInt(hex.slice(4, 6), 16);
+
+      return `${red},${green},${blue}`;
+    }
+
+    const rgbValues = color.match(/\d+(\.\d+)?/g)?.slice(0, 3) ?? [];
+
+    return rgbValues.map((value) => String(Math.round(Number(value)))).join(",");
   }
 
   private async getMapDropdownProvider(): Promise<"Google" | "Cloud maps"> {
