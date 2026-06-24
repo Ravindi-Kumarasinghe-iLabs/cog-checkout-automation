@@ -152,3 +152,21 @@ Then("the delivery address required validation should be displayed", async funct
 
   await checkoutPage.expectDeliveryAddressRequiredValidation();
 });
+
+Then("the rental period label should be visible", async function (this: CustomWorld) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  await checkoutPage.expectRentalPeriodLabelVisible();
+});
+
+When("I click on the rental period field", async function (this: CustomWorld) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  await checkoutPage.clickRentalPeriodField();
+});
+
+Then("the date picker should be displayed", async function (this: CustomWorld) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  await checkoutPage.expectDatePickerDisplayed();
+});
