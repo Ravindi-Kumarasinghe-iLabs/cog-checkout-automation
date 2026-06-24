@@ -46,6 +46,9 @@ module.exports = {
   fullDeliveryAddressDropdownValidation: {
     tags: "@DA-008",
   },
+  emptyDeliveryAddressRequiredValidation: {
+    tags: "@DA-009",
+  },
   browserStack: {
     parallel: 1,
   },
