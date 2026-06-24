@@ -67,6 +67,12 @@ module.exports = {
   doubleTapSingleDayRental: {
     tags: "@RP-006",
   },
+  sameFutureDateRental: {
+    tags: "@RP-008",
+  },
+  futureEndDateRental: {
+    tags: "@RP-007",
+  },
   browserStack: {
     parallel: 1,
   },

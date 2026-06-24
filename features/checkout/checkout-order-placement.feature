@@ -133,6 +133,44 @@ Feature: Cloud of Goods checkout order placement
     And I click the Done button in the date picker
     Then the rental period field should show today as both the start and end date for "Orlando"
 
+  @checkout @rental-period @RP-007
+  Scenario: RP-007 User should be able to select today as the rental start date and a future date as the rental end date
+    Given I open the Cloud of Goods staging home page
+    Then the Cloud of Goods home page should be displayed
+    When I browse all product rentals
+    Then the product rentals all page should be displayed
+    And the Lightweight Mobility Scooter should be listed
+    When I book the Lightweight Mobility Scooter
+    Then the checkout page should be displayed
+    And the delivery location label should be visible
+    When I enter "Orlando" as the delivery address
+    And I select "Orlando, FL, USA" from the address suggestions
+    When I click on the rental period field
+    Then the date picker should be displayed
+    When I tap today's date in the date picker
+    And I navigate to the next month and select a future end date
+    And I click the Done button in the date picker
+    Then the rental period field should show today as start and a future date as end for "Orlando"
+
+  @checkout @rental-period @RP-008
+  Scenario: RP-008 User should be able to select the same future date as both the rental start and end date with a single tap
+    Given I open the Cloud of Goods staging home page
+    Then the Cloud of Goods home page should be displayed
+    When I browse all product rentals
+    Then the product rentals all page should be displayed
+    And the Lightweight Mobility Scooter should be listed
+    When I book the Lightweight Mobility Scooter
+    Then the checkout page should be displayed
+    And the delivery location label should be visible
+    When I enter "Orlando" as the delivery address
+    And I select "Orlando, FL, USA" from the address suggestions
+    When I click on the rental period field
+    Then the date picker should be displayed
+    When I navigate to the next month and tap a future date
+    And I click the Done button in the date picker
+    Then the rental period field should show the selected future date as both the start and end date
+
+
   @checkout @delivery-address @DA-004
   Scenario: DA-004 Verify user can enter and select a valid blacklisted hotel delivery address successfully
     Given I open the checkout page with Lightweight Mobility Scooter in the cart

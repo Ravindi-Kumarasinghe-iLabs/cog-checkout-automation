@@ -207,6 +207,33 @@ When("I double tap today's date in the date picker", async function (this: Custo
   await checkoutPage.doubleTapTodayDateInDatePicker();
 });
 
+When("I navigate to the next month and select a future end date", async function (this: CustomWorld) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  this.selectedEndDate = await checkoutPage.selectFutureDateAsEndDate();
+});
+
+When("I navigate to the next month and tap a future date", async function (this: CustomWorld) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  this.selectedEndDate = await checkoutPage.selectFutureDateAsEndDate();
+});
+
+Then("the rental period field should show the selected future date as both the start and end date", async function (this: CustomWorld) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  await checkoutPage.expectFutureDateAsBothStartAndEnd(this.selectedEndDate ?? "");
+});
+
+Then(
+  "the rental period field should show today as start and a future date as end for {string}",
+  async function (this: CustomWorld, city: string) {
+    const checkoutPage = new CheckoutPage(this.page);
+
+    await checkoutPage.expectTodayAsStartAndFutureDateAsEnd(city, this.selectedEndDate ?? "");
+  },
+);
+
 When("I click the Done button in the date picker", async function (this: CustomWorld) {
   const checkoutPage = new CheckoutPage(this.page);
 
