@@ -25,6 +25,9 @@ module.exports = {
   pickupAddress: {
     tags: "@PA-001",
   },
+  pickupAddressCityMismatch: {
+    tags: "@PA-002",
+  },
   airportDeliveryAddress: {
     tags: "@DA-002",
   },

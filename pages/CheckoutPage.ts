@@ -20,6 +20,7 @@ export class CheckoutPage extends BasePage {
   private readonly deliveryAddressHelpText = this.detailPanel.getByText("Delivery address not sure?");
   private readonly deliveryAddressDropdownValidationMessage = this.detailPanel.getByText("Select a delivery address from the dropdown");
   private readonly deliveryAddressRequiredValidationMessage = this.detailPanel.getByText("A valid delivery address is required.");
+  private readonly pickupCityMismatchValidationMessage = this.detailPanel.getByText("Drop-off and pickup cities must be the same.");
   private readonly deliveryAddressInput = this.detailPanel.getByRole("textbox", {
     name: "Address or name of the place",
     exact: true,
@@ -165,6 +166,21 @@ export class CheckoutPage extends BasePage {
   async expectDeliveryAndPickupAddressValidationSuccessful(): Promise<void> {
     await this.waitForAddressValidationToFinish();
     await this.expectNoDeliveryAddressValidationErrors();
+  }
+
+  async expectPickupCityMismatchValidation(): Promise<void> {
+    await this.waitForAddressValidationToFinish();
+
+    if (testEnv.testEnvironment === "browserstack") {
+      await this.expectPickupCityMismatchValidationForBrowserStack();
+      return;
+    }
+
+    await expect(this.pickupCityMismatchValidationMessage).toBeVisible({ timeout: getActiveTimeoutMs() });
+
+    const validationColor = await this.pickupCityMismatchValidationMessage.evaluate((element) => getComputedStyle(element).color);
+
+    expect(this.cssColorMatchesAny(validationColor, ["#FFA500", "#D0151F"])).toBe(true);
   }
 
   async expectDeliveryLocationLabelVisible(): Promise<void> {
@@ -844,6 +860,7 @@ export class CheckoutPage extends BasePage {
       .replace(/\bunited states of america\b/g, "usa")
       .replace(/\bunited states\b/g, "usa")
       .replace(/\bflorida\b/g, "fl")
+      .replace(/\bcalifornia\b/g, "ca")
       .replace(/[^a-z0-9]+/g, " ")
       .replace(/\s+/g, " ")
       .trim();
@@ -883,6 +900,10 @@ export class CheckoutPage extends BasePage {
 
   private cssColorMatches(actualColor: string, expectedHexColor: string): boolean {
     return this.normalizeCssColor(actualColor) === this.normalizeCssColor(expectedHexColor);
+  }
+
+  private cssColorMatchesAny(actualColor: string, expectedHexColors: string[]): boolean {
+    return expectedHexColors.some((expectedHexColor) => this.cssColorMatches(actualColor, expectedHexColor));
   }
 
   private async clickOutsideDeliveryAddressField(): Promise<void> {
@@ -1019,6 +1040,32 @@ export class CheckoutPage extends BasePage {
     expect(this.cssColorMatches(validationState.inputBorderColor, "#b94a48")).toBe(true);
   }
 
+  private async expectPickupCityMismatchValidationForBrowserStack(): Promise<void> {
+    const validationColors = await this.page.waitForFunction(
+      () => {
+      const isVisible = (element: HTMLElement): boolean => {
+        const styles = getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+
+        return styles.display !== "none" && styles.visibility !== "hidden" && Number(styles.opacity) !== 0 && rect.width > 0 && rect.height > 0;
+      };
+
+        const colors = Array.from(document.querySelectorAll<HTMLElement>("#detail-panel *"))
+        .filter((element) => element.textContent?.includes("Drop-off and pickup cities must be the same.") && isVisible(element))
+        .map((element) => getComputedStyle(element).color);
+
+        return colors.length > 0 ? colors : false;
+      },
+      undefined,
+      { timeout: getActiveTimeoutMs() },
+    ).then((handle) => handle.jsonValue() as Promise<string[]>);
+
+    expect(
+      validationColors.some((validationColor) => this.cssColorMatchesAny(validationColor, ["#FFA500", "#D0151F"])),
+      `Expected pickup city mismatch validation color to be #FFA500 or #D0151F, but received "${validationColors.join(", ")}"`,
+    ).toBe(true);
+  }
+
   private normalizeCssColor(color: string): string {
     if (color.startsWith("#")) {
       const hex = color.replace("#", "");
@@ -1027,6 +1074,12 @@ export class CheckoutPage extends BasePage {
       const blue = Number.parseInt(hex.slice(4, 6), 16);
 
       return `${red},${green},${blue}`;
+    }
+
+    if (color.startsWith("color(srgb")) {
+      const srgbValues = color.match(/-?\d+(\.\d+)?/g)?.slice(0, 3) ?? [];
+
+      return srgbValues.map((value) => String(Math.round(Number(value) * 255))).join(",");
     }
 
     const rgbValues = color.match(/\d+(\.\d+)?/g)?.slice(0, 3) ?? [];
