@@ -106,3 +106,10 @@ Feature: Cloud of Goods checkout order placement
     Then the delivery address section should be displayed
     When I focus the empty delivery address field and click outside
     Then the delivery address required validation should be displayed
+
+  @checkout @delivery-address @DA-010
+  Scenario: DA-010 Verify delivery address required validation appears when Next is clicked with empty field
+    Given I open the checkout page with Lightweight Mobility Scooter in the cart
+    Then the delivery address section should be displayed
+    When I click the Next button
+    Then the delivery address required validation should be displayed

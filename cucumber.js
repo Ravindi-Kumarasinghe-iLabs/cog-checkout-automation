@@ -49,6 +49,9 @@ module.exports = {
   emptyDeliveryAddressRequiredValidation: {
     tags: "@DA-009",
   },
+  nextEmptyDeliveryAddressRequiredValidation: {
+    tags: "@DA-010",
+  },
   rentalPeriodDatePicker: {
     tags: "@RP-002",
   },

@@ -126,7 +126,7 @@ export class CheckoutPage extends BasePage {
   }
 
   async clickNextButton(): Promise<void> {
-    const button = this.page.getByRole("button", { name: /next/i });
+    const button = this.page.locator("#continueBtn").or(this.page.getByRole("button", { name: /next/i })).first();
     await button.waitFor({ state: "visible", timeout: getActiveTimeoutMs() });
 
     if (testEnv.testEnvironment === "browserstack") {
