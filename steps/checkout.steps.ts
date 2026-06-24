@@ -95,3 +95,18 @@ Then("the rental period date picker should be displayed", async function (this: 
 
   await checkoutPage.expectRentalPeriodDatePickerDisplayed();
 });
+
+When(
+  "I type {string} in the delivery address field and click outside without selecting a dropdown address",
+  async function (this: CustomWorld, value: string) {
+    const checkoutPage = new CheckoutPage(this.page);
+
+    await checkoutPage.typeDeliveryAddressAndBlurWithoutSelecting(value);
+  },
+);
+
+Then("the delivery address dropdown selection validation should be displayed", async function (this: CustomWorld) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  await checkoutPage.expectDeliveryAddressDropdownSelectionValidation();
+});

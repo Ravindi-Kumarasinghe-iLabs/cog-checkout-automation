@@ -31,6 +31,9 @@ module.exports = {
   blacklistedHotelDeliveryAddress: {
     tags: "@DA-004",
   },
+  deliveryAddressDropdownValidation: {
+    tags: "@DA-005",
+  },
   browserStack: {
     parallel: 1,
   },
