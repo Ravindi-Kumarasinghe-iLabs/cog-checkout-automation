@@ -310,6 +310,91 @@ export class CheckoutPage extends BasePage {
     await this.page.locator(todaySelector).click();
   }
 
+  async selectFutureDateAsEndDate(): Promise<string> {
+    const today = new Date();
+    // 15th of 2 months from now — always rendered and always in the future
+    const futureDate = new Date(today.getFullYear(), today.getMonth() + 2, 15);
+    const m = futureDate.getMonth() + 1;
+    const d = futureDate.getDate();
+    const y = futureDate.getFullYear();
+    const dateAttr = `${m}/${d}/${y}`;
+    const paddedDate = `${String(m).padStart(2, "0")}/${String(d).padStart(2, "0")}/${y}`;
+
+    if (testEnv.device === "mobile") {
+      const fullSelector = `#calendarContainer [data-date="${dateAttr}"]`;
+      if (testEnv.testEnvironment === "browserstack") {
+        await this.page.waitForSelector(fullSelector, { state: "attached", timeout: Math.min(getActiveTimeoutMs(), 30000) });
+        await this.page.locator(fullSelector).scrollIntoViewIfNeeded({ timeout: Math.min(getActiveTimeoutMs(), 30000) });
+        await this.page.locator(fullSelector).click({ force: true, timeout: Math.min(getActiveTimeoutMs(), 30000) });
+      } else {
+        await this.page.locator(fullSelector).scrollIntoViewIfNeeded();
+        await this.page.locator(fullSelector).click();
+      }
+    } else {
+      const nextBtn = this.page.locator("#nextBtnDesktopRangePicker");
+      if (testEnv.testEnvironment === "browserstack") {
+        await nextBtn.waitFor({ state: "visible", timeout: Math.min(getActiveTimeoutMs(), 30000) });
+        await nextBtn.click({ force: true, timeout: Math.min(getActiveTimeoutMs(), 30000) });
+      } else {
+        await nextBtn.click();
+      }
+      const fullSelector = `#custRangePicketDekstopCalendarPopup [data-date="${dateAttr}"]`;
+      if (testEnv.testEnvironment === "browserstack") {
+        await this.page.waitForSelector(fullSelector, { state: "visible", timeout: Math.min(getActiveTimeoutMs(), 30000) });
+        await this.page.locator(fullSelector).click({ force: true, timeout: Math.min(getActiveTimeoutMs(), 30000) });
+      } else {
+        await this.page.locator(fullSelector).click();
+      }
+    }
+
+    return paddedDate;
+  }
+
+  async expectFutureDateAsBothStartAndEnd(date: string): Promise<void> {
+    if (testEnv.testEnvironment === "browserstack") {
+      await this.page.waitForFunction(
+        (expected: string) => {
+          const startVal = (document.querySelector("#dp-dsk-start") as HTMLInputElement | null)?.value ?? "";
+          const endVal = (document.querySelector("#dp-dsk-end") as HTMLInputElement | null)?.value ?? "";
+          return startVal === expected && endVal === expected;
+        },
+        date,
+        { timeout: Math.min(getActiveTimeoutMs(), 30000) },
+      );
+      return;
+    }
+
+    await expect(this.page.locator("#dp-dsk-start")).toHaveValue(date, { timeout: getActiveTimeoutMs() });
+    await expect(this.page.locator("#dp-dsk-end")).toHaveValue(date, { timeout: getActiveTimeoutMs() });
+    await expect(this.page.locator("#dp-dsk-start-end")).not.toHaveValue("", {
+      timeout: Math.min(getActiveTimeoutMs(), 15000),
+    });
+  }
+
+  async expectTodayAsStartAndFutureDateAsEnd(city: string, endDate: string): Promise<void> {
+    const { year, month, day } = this.getDeliveryCityLocalDateTime(city);
+    const expectedStart = `${String(month).padStart(2, "0")}/${String(day).padStart(2, "0")}/${year}`;
+
+    if (testEnv.testEnvironment === "browserstack") {
+      await this.page.waitForFunction(
+        ({ start, end }: { start: string; end: string }) => {
+          const startVal = (document.querySelector("#dp-dsk-start") as HTMLInputElement | null)?.value ?? "";
+          const endVal = (document.querySelector("#dp-dsk-end") as HTMLInputElement | null)?.value ?? "";
+          return startVal === start && endVal === end;
+        },
+        { start: expectedStart, end: endDate },
+        { timeout: Math.min(getActiveTimeoutMs(), 30000) },
+      );
+      return;
+    }
+
+    await expect(this.page.locator("#dp-dsk-start")).toHaveValue(expectedStart, { timeout: getActiveTimeoutMs() });
+    await expect(this.page.locator("#dp-dsk-end")).toHaveValue(endDate, { timeout: getActiveTimeoutMs() });
+    await expect(this.page.locator("#dp-dsk-start-end")).not.toHaveValue("", {
+      timeout: Math.min(getActiveTimeoutMs(), 15000),
+    });
+  }
+
   async doubleTapTodayDateInDatePicker(): Promise<void> {
     const calendarSelector = testEnv.device === "mobile" ? "#calendarContainer" : "#custRangePicketDekstopCalendarPopup";
     const today = new Date();
