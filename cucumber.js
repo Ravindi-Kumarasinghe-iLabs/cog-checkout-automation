@@ -61,6 +61,9 @@ module.exports = {
   pastDatesDisabled: {
     tags: "@RP-004",
   },
+  singleDayRental: {
+    tags: "@RP-005",
+  },
   browserStack: {
     parallel: 1,
   },
