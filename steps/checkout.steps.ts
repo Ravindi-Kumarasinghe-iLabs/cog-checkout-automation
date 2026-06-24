@@ -95,3 +95,33 @@ Then("the rental period date picker should be displayed", async function (this: 
 
   await checkoutPage.expectRentalPeriodDatePickerDisplayed();
 });
+
+Then("the delivery location label should be visible", async function (this: CustomWorld) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  await checkoutPage.expectDeliveryLocationLabelVisible();
+});
+
+When("I enter {string} as the delivery address", async function (this: CustomWorld, address: string) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  await checkoutPage.enterDeliveryAddress(address);
+});
+
+When("I select {string} from the address suggestions", async function (this: CustomWorld, address: string) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  await checkoutPage.selectFromAddressSuggestions(address);
+});
+
+When("I click the Next button", async function (this: CustomWorld) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  await checkoutPage.clickNextButton();
+});
+
+Then("the {string} validation message should be displayed", async function (this: CustomWorld, message: string) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  await checkoutPage.expectValidationMessage(message);
+});

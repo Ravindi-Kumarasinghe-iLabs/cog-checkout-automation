@@ -90,6 +90,70 @@ export class CheckoutPage extends BasePage {
     await this.expectNoDeliveryAddressValidationErrors();
   }
 
+  async expectDeliveryLocationLabelVisible(): Promise<void> {
+    if (testEnv.testEnvironment === "browserstack") {
+      await this.waitForBrowserStackSelector("#detail-panel");
+      await this.expectBrowserStackTextInDetail("#detail-panel", /Enter delivery location/i);
+      return;
+    }
+
+    await expect(this.deliveryLocationLabel).toBeVisible({ timeout: getActiveTimeoutMs() });
+  }
+
+  async enterDeliveryAddress(address: string): Promise<void> {
+    await this.deliveryAddressInput.click();
+    await this.deliveryAddressInput.fill("");
+    await this.deliveryAddressInput.focus();
+
+    for (const chunk of address.match(/.{1,5}/g) ?? []) {
+      await this.page.keyboard.type(chunk, { delay: 250 });
+      if (await this.isAutocompleteDropdownLoaded()) {
+        return;
+      }
+    }
+
+    await expect(
+      this.page.locator("#delivery_location-autocomplete-list div, .pac-container .pac-item, [role='option']").first()
+    ).toBeVisible({ timeout: getActiveTimeoutMs() });
+  }
+
+  async selectFromAddressSuggestions(address: string): Promise<void> {
+    const suggestion = await this.getSelectableAddressSuggestion(address);
+    await suggestion.click();
+    await this.waitForAddressValidationToFinish();
+  }
+
+  async clickNextButton(): Promise<void> {
+    const button = this.page.getByRole("button", { name: /next/i });
+    await button.waitFor({ state: "visible", timeout: getActiveTimeoutMs() });
+
+    if (testEnv.testEnvironment === "browserstack") {
+      await button.click({ force: true, timeout: getActiveTimeoutMs() });
+      return;
+    }
+
+    await button.click();
+  }
+
+  async expectValidationMessage(message: string): Promise<void> {
+    const messagePattern = new RegExp(message.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+
+    if (testEnv.testEnvironment === "browserstack") {
+      const escapedMessage = message.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      await this.page.waitForFunction(
+        ({ selector, pattern }: { selector: string; pattern: string }) => {
+          const el = document.querySelector(selector);
+          return el ? new RegExp(pattern, "i").test(el.textContent ?? "") : false;
+        },
+        { selector: "#detail-panel", pattern: escapedMessage },
+        { timeout: Math.min(getActiveTimeoutMs(), 30000) },
+      );
+      return;
+    }
+
+    await expect(this.page.getByText(messagePattern).first()).toBeVisible({ timeout: getActiveTimeoutMs() });
+  }
+
   async expectRentalPeriodDatePickerDisplayed(): Promise<void> {
     if (testEnv.testEnvironment === "browserstack") {
       await this.expectBrowserStackTextInDetail("#detail-panel", /Enter rental period\*/i);
