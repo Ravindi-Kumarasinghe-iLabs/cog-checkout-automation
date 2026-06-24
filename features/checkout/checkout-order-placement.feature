@@ -33,6 +33,21 @@ Feature: Cloud of Goods checkout order placement
     Then the delivery address "Universal Studios Florida, Universal Boulevard, Orlando, FL, USA" should be selected successfully
     And the rental period date picker should be displayed
 
+  @checkout @rental-period @RP-001
+  Scenario: RP-001 Show rental period required validation when Next is clicked without selecting a rental period
+    Given I open the Cloud of Goods staging home page
+    Then the Cloud of Goods home page should be displayed
+    When I browse all product rentals
+    Then the product rentals all page should be displayed
+    And the Lightweight Mobility Scooter should be listed
+    When I book the Lightweight Mobility Scooter
+    Then the checkout page should be displayed
+    And the delivery location label should be visible
+    When I enter "Orlando" as the delivery address
+    And I select "Orlando, FL, USA" from the address suggestions
+    And I click the Next button
+    Then the "Rental period is required." validation message should be displayed
+
   @checkout @delivery-address @DA-004
   Scenario: DA-004 Verify user can enter and select a valid blacklisted hotel delivery address successfully
     Given I open the checkout page with Lightweight Mobility Scooter in the cart
