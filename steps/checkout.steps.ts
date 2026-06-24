@@ -140,3 +140,15 @@ Then("the delivery address dropdown selection validation should be displayed", a
 
   await checkoutPage.expectDeliveryAddressDropdownSelectionValidation();
 });
+
+When("I focus the empty delivery address field and click outside", async function (this: CustomWorld) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  await checkoutPage.focusEmptyDeliveryAddressAndBlur();
+});
+
+Then("the delivery address required validation should be displayed", async function (this: CustomWorld) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  await checkoutPage.expectDeliveryAddressRequiredValidation();
+});

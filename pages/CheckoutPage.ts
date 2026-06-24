@@ -17,6 +17,7 @@ export class CheckoutPage extends BasePage {
     .first();
   private readonly deliveryAddressHelpText = this.detailPanel.getByText("Delivery address not sure?");
   private readonly deliveryAddressDropdownValidationMessage = this.detailPanel.getByText("Select a delivery address from the dropdown");
+  private readonly deliveryAddressRequiredValidationMessage = this.detailPanel.getByText("A valid delivery address is required.");
   private readonly deliveryAddressInput = this.detailPanel.getByRole("textbox", {
     name: "Address or name of the place",
     exact: true,
@@ -190,6 +191,28 @@ export class CheckoutPage extends BasePage {
     const inputBorderColor = await this.deliveryAddressInput.evaluate((element) => getComputedStyle(element).borderColor);
 
     expect(this.cssColorMatches(validationColor, "#FFA500")).toBe(true);
+    expect(this.cssColorMatches(inputBorderColor, "#b94a48")).toBe(true);
+  }
+
+  async focusEmptyDeliveryAddressAndBlur(): Promise<void> {
+    await this.deliveryAddressInput.click();
+    await this.deliveryAddressInput.fill("");
+    await this.clickOutsideDeliveryAddressField();
+  }
+
+  async expectDeliveryAddressRequiredValidation(): Promise<void> {
+    if (testEnv.testEnvironment === "browserstack") {
+      await this.expectDeliveryAddressRequiredValidationForBrowserStack();
+      return;
+    }
+
+    await expect(this.deliveryAddressRequiredValidationMessage).toBeVisible({ timeout: getActiveTimeoutMs() });
+    await expect(this.deliveryAddressHelpText).not.toBeVisible();
+
+    const validationColor = await this.deliveryAddressRequiredValidationMessage.evaluate((element) => getComputedStyle(element).color);
+    const inputBorderColor = await this.deliveryAddressInput.evaluate((element) => getComputedStyle(element).borderColor);
+
+    expect(this.cssColorMatches(validationColor, "#D0151F")).toBe(true);
     expect(this.cssColorMatches(inputBorderColor, "#b94a48")).toBe(true);
   }
 
@@ -379,6 +402,42 @@ export class CheckoutPage extends BasePage {
     expect(validationState.validationVisible).toBe(true);
     expect(validationState.helpVisible).toBe(false);
     expect(this.cssColorMatches(validationState.validationColor, "#FFA500")).toBe(true);
+    expect(this.cssColorMatches(validationState.inputBorderColor, "#b94a48")).toBe(true);
+  }
+
+  private async expectDeliveryAddressRequiredValidationForBrowserStack(): Promise<void> {
+    await this.page.waitForFunction(
+      () => document.body.textContent?.includes("A valid delivery address is required."),
+      undefined,
+      { timeout: getActiveTimeoutMs() },
+    );
+
+    const validationState = await this.page.evaluate(() => {
+      const findLeafElementByText = (text: string): HTMLElement | undefined => {
+        const elements = Array.from(document.querySelectorAll<HTMLElement>("#detail-panel *"));
+
+        return elements.find((element) => {
+          const containsText = element.textContent?.includes(text) ?? false;
+          const childContainsText = Array.from(element.children).some((child) => child.textContent?.includes(text));
+
+          return containsText && !childContainsText;
+        });
+      };
+      const validationElement = findLeafElementByText("A valid delivery address is required.");
+      const helpElement = findLeafElementByText("Delivery address not sure?");
+      const inputElement = document.querySelector<HTMLInputElement>("#delivery_location");
+
+      return {
+        validationVisible: Boolean(validationElement && validationElement.offsetParent !== null),
+        validationColor: validationElement ? getComputedStyle(validationElement).color : "",
+        helpVisible: Boolean(helpElement && helpElement.offsetParent !== null),
+        inputBorderColor: inputElement ? getComputedStyle(inputElement).borderColor : "",
+      };
+    });
+
+    expect(validationState.validationVisible).toBe(true);
+    expect(validationState.helpVisible).toBe(false);
+    expect(this.cssColorMatches(validationState.validationColor, "#D0151F")).toBe(true);
     expect(this.cssColorMatches(validationState.inputBorderColor, "#b94a48")).toBe(true);
   }
 
