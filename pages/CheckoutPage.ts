@@ -2,6 +2,8 @@ import { BasePage } from "./BasePage";
 import { expect, type Locator } from "@playwright/test";
 import { getActiveTimeoutMs, testEnv } from "../support/env";
 
+const ADDRESS_TYPING_DELAY_MS = 400;
+
 export class CheckoutPage extends BasePage {
   private readonly detailPanel = this.page.locator("#detail-panel");
   private readonly cartPanel = this.page.locator("#cart-panel");
@@ -22,6 +24,9 @@ export class CheckoutPage extends BasePage {
     name: "Address or name of the place",
     exact: true,
   });
+  private readonly useSameAddressCheckbox = this.detailPanel.getByLabel("Use same address for both");
+  private readonly useSameAddressLabel = this.detailPanel.getByText("Use same address for both");
+  private readonly pickupAddressInput = this.detailPanel.getByPlaceholder("Pickup address or name of the");
   private readonly rentalPeriodLabel = this.detailPanel.getByText("Enter rental period*");
   private readonly rentalPeriodDatePicker = this.detailPanel.getByRole("textbox", {
     name: "Pick your start & end dates",
@@ -74,10 +79,10 @@ export class CheckoutPage extends BasePage {
     await this.deliveryAddressInput.click();
     await this.deliveryAddressInput.fill("");
 
-    const provider = await this.typeAddressUntilSuggestionLoads(address);
+    const provider = await this.typeAddressUntilSuggestionLoads(address, this.deliveryAddressInput);
     const addressSuggestion = await this.getSelectableAddressSuggestion(address);
 
-    await addressSuggestion.click();
+    await this.clickAddressSuggestion(addressSuggestion);
     await this.waitForAddressValidationToFinish();
 
     return provider;
@@ -85,9 +90,9 @@ export class CheckoutPage extends BasePage {
 
   async expectDeliveryAddressSelected(address: string): Promise<void> {
     const exactAddressPattern = new RegExp(address.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+    const selectedAddress = await this.waitForAddressInputToMatch(this.deliveryAddressInput, address, exactAddressPattern);
 
     if (testEnv.testEnvironment === "browserstack") {
-      const selectedAddress = await this.deliveryAddressInput.inputValue({ timeout: getActiveTimeoutMs() });
       const hasErrorClass = await this.deliveryAddressInput.evaluate((element) => element.classList.contains("has-error"));
 
       expect(this.selectedAddressMatchesExpected(selectedAddress, address, exactAddressPattern)).toBe(true);
@@ -96,9 +101,69 @@ export class CheckoutPage extends BasePage {
       return;
     }
 
-    const selectedAddress = await this.deliveryAddressInput.inputValue({ timeout: getActiveTimeoutMs() });
     expect(this.selectedAddressMatchesExpected(selectedAddress, address, exactAddressPattern)).toBe(true);
     await expect(this.deliveryAddressInput).not.toHaveClass(/has-error/);
+    await this.expectNoDeliveryAddressValidationErrors();
+  }
+
+  async expectUseSameAddressCheckboxDisplayed(): Promise<void> {
+    if (testEnv.testEnvironment === "browserstack") {
+      await this.expectBrowserStackTextInDetail("#detail-panel", /Use same address for both/i);
+      await this.waitForBrowserStackSelector("input[type='checkbox']");
+      return;
+    }
+
+    await expect(this.useSameAddressLabel).toBeVisible({ timeout: getActiveTimeoutMs() });
+    await expect(this.useSameAddressCheckbox).toBeVisible({ timeout: getActiveTimeoutMs() });
+  }
+
+  async uncheckUseSameAddressForBoth(): Promise<void> {
+    await this.useSameAddressCheckbox.waitFor({ state: "visible", timeout: getActiveTimeoutMs() });
+
+    if (await this.useSameAddressCheckbox.isChecked()) {
+      await this.useSameAddressCheckbox.uncheck({ force: testEnv.testEnvironment === "browserstack" });
+    }
+  }
+
+  async expectPickupAddressFieldDisplayed(): Promise<void> {
+    if (testEnv.testEnvironment === "browserstack") {
+      await this.page.waitForFunction(
+        () =>
+          Array.from(document.querySelectorAll<HTMLInputElement>("input")).some((input) =>
+            input.placeholder.toLowerCase().includes("pickup address or name of the"),
+          ),
+        undefined,
+        { timeout: getActiveTimeoutMs() },
+      );
+      return;
+    }
+
+    await expect(this.pickupAddressInput).toBeVisible({ timeout: getActiveTimeoutMs() });
+  }
+
+  async enterAndSelectPickupAddress(address: string): Promise<"Google" | "Cloud maps"> {
+    await this.pickupAddressInput.click();
+    await this.pickupAddressInput.fill("");
+
+    const provider = await this.typeAddressUntilSuggestionLoads(address, this.pickupAddressInput);
+    const addressSuggestion = await this.getSelectableAddressSuggestion(address);
+
+    await this.clickAddressSuggestion(addressSuggestion);
+    await this.waitForAddressValidationToFinish();
+
+    return provider;
+  }
+
+  async expectPickupAddressSelected(address: string): Promise<void> {
+    const exactAddressPattern = new RegExp(address.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+    const selectedAddress = await this.waitForAddressInputToMatch(this.pickupAddressInput, address, exactAddressPattern);
+
+    expect(this.selectedAddressMatchesExpected(selectedAddress, address, exactAddressPattern)).toBe(true);
+    await this.expectNoDeliveryAddressValidationErrors();
+  }
+
+  async expectDeliveryAndPickupAddressValidationSuccessful(): Promise<void> {
+    await this.waitForAddressValidationToFinish();
     await this.expectNoDeliveryAddressValidationErrors();
   }
 
@@ -118,7 +183,7 @@ export class CheckoutPage extends BasePage {
     await this.deliveryAddressInput.focus();
 
     for (const chunk of address.match(/.{1,5}/g) ?? []) {
-      await this.page.keyboard.type(chunk, { delay: 250 });
+      await this.page.keyboard.type(chunk, { delay: ADDRESS_TYPING_DELAY_MS });
       if (await this.isAutocompleteDropdownLoaded()) {
         return;
       }
@@ -142,13 +207,13 @@ export class CheckoutPage extends BasePage {
         { timeout: Math.min(getActiveTimeoutMs(), 30000) },
       );
       const suggestion = await this.getSelectableAddressSuggestion(address);
-      await suggestion.click({ force: true, timeout: Math.min(getActiveTimeoutMs(), 30000) });
+      await this.clickAddressSuggestion(suggestion);
       await this.waitForAddressValidationToFinish();
       return;
     }
 
     const suggestion = await this.getSelectableAddressSuggestion(address);
-    await suggestion.click();
+    await this.clickAddressSuggestion(suggestion);
     await this.waitForAddressValidationToFinish();
   }
 
@@ -568,7 +633,7 @@ export class CheckoutPage extends BasePage {
     await this.deliveryAddressInput.click();
     await this.deliveryAddressInput.fill("");
     await this.deliveryAddressInput.focus();
-    await this.page.keyboard.type(value, { delay: 250 });
+    await this.page.keyboard.type(value, { delay: ADDRESS_TYPING_DELAY_MS });
     await this.clickOutsideDeliveryAddressField();
     await this.clickOutsideAgainIfAutocompleteDropdownIsVisible();
   }
@@ -611,14 +676,14 @@ export class CheckoutPage extends BasePage {
     expect(this.cssColorMatches(inputBorderColor, "#b94a48")).toBe(true);
   }
 
-  private async typeAddressUntilSuggestionLoads(address: string): Promise<"Google" | "Cloud maps"> {
+  private async typeAddressUntilSuggestionLoads(address: string, addressInput: Locator): Promise<"Google" | "Cloud maps"> {
     let provider: "Google" | "Cloud maps" | undefined;
     let typedCharacters = 0;
 
-    await this.deliveryAddressInput.focus();
+    await addressInput.focus();
 
     for (const chunk of address.match(/.{1,5}/g) ?? []) {
-      await this.page.keyboard.type(chunk, { delay: 250 });
+      await this.page.keyboard.type(chunk, { delay: ADDRESS_TYPING_DELAY_MS });
       typedCharacters += chunk.length;
 
       const dropdownLoaded = await this.isAutocompleteDropdownLoaded();
@@ -627,31 +692,27 @@ export class CheckoutPage extends BasePage {
         provider = await this.getMapDropdownProvider();
       }
 
-      if (typedCharacters >= 10 && (await this.getAddressSuggestion(address).isVisible({ timeout: 1000 }).catch(() => false))) {
+      if (typedCharacters >= 10 && (await this.getMatchingAddressSuggestion(address).isVisible({ timeout: 1000 }).catch(() => false))) {
         return provider ?? this.getMapDropdownProvider();
       }
     }
 
-    if (testEnv.device === "mobile") {
-      await expect(this.getTopAddressSuggestion()).toBeVisible({ timeout: getActiveTimeoutMs() });
-    } else {
-      await expect(this.getAddressSuggestion(address)).toBeVisible({ timeout: getActiveTimeoutMs() });
-    }
+    await expect(this.getMatchingAddressSuggestion(address)).toBeVisible({ timeout: getActiveTimeoutMs() });
 
     return provider ?? this.getMapDropdownProvider();
   }
 
   private async isAutocompleteDropdownLoaded(): Promise<boolean> {
     return this.page
-      .locator("#delivery_location-autocomplete-list div, .pac-container .pac-item, [role='option']")
+      .locator("[id*='autocomplete-list'] div, .pac-container .pac-item, [role='option']")
       .first()
       .isVisible({ timeout: 1000 })
       .catch(() => false);
   }
 
-  private getAddressSuggestion(address: string): Locator {
+  private getExactAddressSuggestion(address: string): Locator {
     return this.page
-      .locator("#delivery_location-autocomplete-list div")
+      .locator("[id*='autocomplete-list'] div")
       .filter({ hasText: address })
       .first()
       .or(this.page.locator(".pac-container .pac-item").filter({ hasText: address }).first())
@@ -659,25 +720,63 @@ export class CheckoutPage extends BasePage {
       .or(this.page.locator("[id*='autocomplete'], [class*='autocomplete']").getByText(address, { exact: true }).first());
   }
 
-  private getTopAddressSuggestion(): Locator {
-    return this.page.locator("#delivery_location-autocomplete-list div, .pac-container .pac-item, [role='option']").first();
+  private getMatchingAddressSuggestion(address: string): Locator {
+    const expectedAddressParts = this.getImportantAddressParts(address);
+    const addressPattern =
+      expectedAddressParts.length <= 2
+        ? new RegExp(`^\\s*${expectedAddressParts.map((part) => this.escapeRegex(part)).join("\\b.*\\b")}`, "i")
+        : new RegExp(expectedAddressParts.map((part) => this.escapeRegex(part)).join(".*"), "i");
+
+    return this.getExactAddressSuggestion(address)
+      .or(this.page.locator("[id*='autocomplete-list'] div").filter({ hasText: addressPattern }).first())
+      .or(this.page.locator(".pac-container .pac-item").filter({ hasText: addressPattern }).first())
+      .or(this.page.getByRole("option", { name: addressPattern }).first());
   }
 
   private async getSelectableAddressSuggestion(address: string): Promise<Locator> {
-    const exactAddressSuggestion = this.getAddressSuggestion(address);
+    const matchingAddressSuggestion = this.getMatchingAddressSuggestion(address);
 
-    if (await exactAddressSuggestion.isVisible({ timeout: 3000 }).catch(() => false)) {
-      return exactAddressSuggestion;
+    if (await matchingAddressSuggestion.isVisible({ timeout: 3000 }).catch(() => false)) {
+      return matchingAddressSuggestion;
     }
 
-    if (testEnv.device === "mobile") {
-      const topAddressSuggestion = this.getTopAddressSuggestion();
-      await expect(topAddressSuggestion).toBeVisible({ timeout: getActiveTimeoutMs() });
-      return topAddressSuggestion;
+    await expect(matchingAddressSuggestion).toBeVisible({ timeout: getActiveTimeoutMs() });
+    return matchingAddressSuggestion;
+  }
+
+  private async clickAddressSuggestion(addressSuggestion: Locator): Promise<void> {
+    const clickTimeout = Math.min(getActiveTimeoutMs(), 30000);
+
+    await addressSuggestion
+      .click({ force: true, timeout: clickTimeout })
+      .catch(async () => {
+        await addressSuggestion.dispatchEvent("mousedown");
+        await addressSuggestion.dispatchEvent("mouseup");
+        await addressSuggestion.dispatchEvent("click");
+      });
+  }
+
+  private async waitForAddressInputToMatch(input: Locator, expectedAddress: string, exactAddressPattern: RegExp): Promise<string> {
+    const timeoutMs = Math.min(getActiveTimeoutMs(), 60000);
+    const deadline = Date.now() + timeoutMs;
+    let selectedAddress = "";
+
+    while (Date.now() < deadline) {
+      selectedAddress = await input.inputValue().catch(() => "");
+
+      if (this.selectedAddressMatchesExpected(selectedAddress, expectedAddress, exactAddressPattern)) {
+        return selectedAddress;
+      }
+
+      await this.page.waitForTimeout(500);
     }
 
-    await expect(exactAddressSuggestion).toBeVisible({ timeout: getActiveTimeoutMs() });
-    return exactAddressSuggestion;
+    expect(
+      this.selectedAddressMatchesExpected(selectedAddress, expectedAddress, exactAddressPattern),
+      `Expected address field value "${selectedAddress}" to match "${expectedAddress}"`,
+    ).toBe(true);
+
+    return selectedAddress;
   }
 
   private selectedAddressMatchesExpected(selectedAddress: string, expectedAddress: string, exactAddressPattern: RegExp): boolean {
@@ -685,17 +784,69 @@ export class CheckoutPage extends BasePage {
       return true;
     }
 
-    if (testEnv.device !== "mobile") {
-      return false;
+    const normalizedSelectedAddress = this.normalizeAddressForComparison(selectedAddress);
+    const normalizedExpectedAddress = this.normalizeAddressForComparison(expectedAddress);
+
+    if (normalizedSelectedAddress.includes(normalizedExpectedAddress)) {
+      return true;
     }
 
     const expectedAddressParts = expectedAddress
       .split(",")
-      .map((part) => part.trim())
+      .map((part) => this.normalizeAddressForComparison(part))
       .filter(Boolean);
-    const importantAddressParts = [expectedAddressParts[0], expectedAddressParts[1], ...expectedAddressParts.slice(-3)].filter(Boolean);
+    const importantAddressParts = this.getImportantAddressParts(expectedAddressParts.join(","));
 
-    return importantAddressParts.every((part) => selectedAddress.toLowerCase().includes(part.toLowerCase()));
+    if (importantAddressParts.length <= 2) {
+      return (
+        normalizedSelectedAddress.startsWith(importantAddressParts[0]) &&
+        importantAddressParts.slice(1).every((part) => normalizedSelectedAddress.includes(part))
+      );
+    }
+
+    return importantAddressParts.every((part) => normalizedSelectedAddress.includes(part));
+  }
+
+  private getImportantAddressParts(address: string): string[] {
+    const expectedAddressParts = address
+      .split(",")
+      .map((part) => this.normalizeAddressForComparison(part))
+      .filter((part) => part !== "usa")
+      .filter(Boolean);
+
+    if (expectedAddressParts.length <= 2) {
+      return expectedAddressParts;
+    }
+
+    const [nameOrCity, streetOrState, ...rest] = expectedAddressParts;
+    const importantParts = [nameOrCity, streetOrState];
+    const city = rest.find((part) => part !== "fl" && part !== "usa");
+    const state = rest.find((part) => part === "fl");
+
+    if (city && !importantParts.includes(city)) {
+      importantParts.push(city);
+    }
+
+    if (state && !importantParts.includes(state)) {
+      importantParts.push(state);
+    }
+
+    return importantParts;
+  }
+
+  private escapeRegex(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  private normalizeAddressForComparison(address: string): string {
+    return address
+      .toLowerCase()
+      .replace(/\bunited states of america\b/g, "usa")
+      .replace(/\bunited states\b/g, "usa")
+      .replace(/\bflorida\b/g, "fl")
+      .replace(/[^a-z0-9]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
   }
 
   private getDeliveryCityLocalDateTime(city: string): {

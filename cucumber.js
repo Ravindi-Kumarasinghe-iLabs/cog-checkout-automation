@@ -22,6 +22,9 @@ module.exports = {
   deliveryAddress: {
     tags: "@DA-001",
   },
+  pickupAddress: {
+    tags: "@PA-001",
+  },
   airportDeliveryAddress: {
     tags: "@DA-002",
   },
