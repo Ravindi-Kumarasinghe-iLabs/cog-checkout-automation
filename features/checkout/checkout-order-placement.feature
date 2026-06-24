@@ -79,6 +79,24 @@ Feature: Cloud of Goods checkout order placement
     When I click on the date picker icon
     Then the date picker should be displayed
 
+  @checkout @rental-period @RP-004
+  Scenario: RP-004 Date picker should disable past dates, apply 4 PM same-day cutoff, and enable future dates
+    Given I open the Cloud of Goods staging home page
+    Then the Cloud of Goods home page should be displayed
+    When I browse all product rentals
+    Then the product rentals all page should be displayed
+    And the Lightweight Mobility Scooter should be listed
+    When I book the Lightweight Mobility Scooter
+    Then the checkout page should be displayed
+    And the delivery location label should be visible
+    When I enter "Orlando" as the delivery address
+    And I select "Orlando, FL, USA" from the address suggestions
+    When I click on the rental period field
+    Then the date picker should be displayed
+    And past dates should be displayed as disabled in the date picker
+    And today's date should reflect the 4 PM same-day cutoff for "Orlando"
+    And future dates should be enabled in the date picker
+
   @checkout @delivery-address @DA-004
   Scenario: DA-004 Verify user can enter and select a valid blacklisted hotel delivery address successfully
     Given I open the checkout page with Lightweight Mobility Scooter in the cart

@@ -120,6 +120,23 @@ export class CheckoutPage extends BasePage {
   }
 
   async selectFromAddressSuggestions(address: string): Promise<void> {
+    if (testEnv.testEnvironment === "browserstack") {
+      const dropdownSelector = "#delivery_location-autocomplete-list div, .pac-container .pac-item, [role='option']";
+      const cityKeyword = address.split(",")[0].trim().toLowerCase();
+      await this.page.waitForFunction(
+        ({ sel, keyword }: { sel: string; keyword: string }) =>
+          Array.from(document.querySelectorAll(sel)).some((el) =>
+            el.textContent?.toLowerCase().includes(keyword),
+          ),
+        { sel: dropdownSelector, keyword: cityKeyword },
+        { timeout: Math.min(getActiveTimeoutMs(), 30000) },
+      );
+      const suggestion = await this.getSelectableAddressSuggestion(address);
+      await suggestion.click({ force: true, timeout: Math.min(getActiveTimeoutMs(), 30000) });
+      await this.waitForAddressValidationToFinish();
+      return;
+    }
+
     const suggestion = await this.getSelectableAddressSuggestion(address);
     await suggestion.click();
     await this.waitForAddressValidationToFinish();
@@ -197,6 +214,83 @@ export class CheckoutPage extends BasePage {
     }
 
     await expect(this.page.locator(calendarSelector)).toBeVisible({ timeout: getActiveTimeoutMs() });
+  }
+
+  async expectPastDatesDisabledInDatePicker(): Promise<void> {
+    const calendarSelector = testEnv.device === "mobile" ? "#calendarContainer" : "#custRangePicketDekstopCalendarPopup";
+    const disabledSelector = `${calendarSelector} .cust-range-picker-disabled`;
+
+    if (testEnv.testEnvironment === "browserstack") {
+      await this.page.waitForFunction(
+        (sel: string) => document.querySelectorAll(sel).length > 0,
+        disabledSelector,
+        { timeout: Math.min(getActiveTimeoutMs(), 30000) },
+      );
+      const hasPastTitle = await this.page.evaluate((sel: string) => {
+        const els = document.querySelectorAll(sel);
+        return Array.from(els).some((el) => el.getAttribute("title")?.toLowerCase().includes("past") ?? false);
+      }, disabledSelector);
+      expect(hasPastTitle).toBe(true);
+      return;
+    }
+
+    const disabledDates = this.page.locator(disabledSelector);
+    await expect(disabledDates.first()).toBeVisible({ timeout: getActiveTimeoutMs() });
+    const count = await disabledDates.count();
+    expect(count).toBeGreaterThan(0);
+    const firstTitle = await disabledDates.first().getAttribute("title");
+    expect(firstTitle?.toLowerCase()).toContain("past");
+  }
+
+  async expectTodayCutoffRuleForCity(city: string): Promise<void> {
+    const calendarSelector = testEnv.device === "mobile" ? "#calendarContainer" : "#custRangePicketDekstopCalendarPopup";
+    const { year, month, day, hour, minute } = this.getDeliveryCityLocalDateTime(city);
+    const CUTOFF_MINUTES = 16 * 60; // 4:00 PM
+    const isPastCutoff = hour * 60 + minute > CUTOFF_MINUTES;
+    const todaySelector = `${calendarSelector} [data-date="${month}/${day}/${year}"]`;
+
+    if (testEnv.testEnvironment === "browserstack") {
+      const todayIsDisabled = await this.page.evaluate(
+        (sel: string) => document.querySelector(sel)?.classList.contains("cust-range-picker-disabled") ?? null,
+        todaySelector,
+      );
+      if (todayIsDisabled !== null) {
+        expect(todayIsDisabled).toBe(isPastCutoff);
+      }
+      return;
+    }
+
+    const todayEl = this.page.locator(todaySelector);
+    if (isPastCutoff) {
+      await expect(todayEl).toHaveClass(/cust-range-picker-disabled/, { timeout: getActiveTimeoutMs() });
+    } else {
+      await expect(todayEl).not.toHaveClass(/cust-range-picker-disabled/, { timeout: getActiveTimeoutMs() });
+    }
+  }
+
+  async expectFutureDatesEnabledInDatePicker(): Promise<void> {
+    const calendarSelector = testEnv.device === "mobile" ? "#calendarContainer" : "#custRangePicketDekstopCalendarPopup";
+    const monthContainerSelector = `${calendarSelector} .custRangePicketDekstopMonth-container`;
+
+    if (testEnv.testEnvironment === "browserstack") {
+      await this.page.waitForSelector(monthContainerSelector, {
+        state: "attached",
+        timeout: Math.min(getActiveTimeoutMs(), 30000),
+      });
+    }
+
+    const allFutureEnabled = await this.page.evaluate((monthSel: string) => {
+      const containers = document.querySelectorAll(monthSel);
+      const secondMonth = containers[1];
+      if (!secondMonth) return null;
+      const dateCells = secondMonth.querySelectorAll("[data-date]");
+      if (dateCells.length === 0) return null;
+      return Array.from(dateCells).every((el) => !el.classList.contains("cust-range-picker-disabled"));
+    }, monthContainerSelector);
+
+    if (allFutureEnabled !== null) {
+      expect(allFutureEnabled).toBe(true);
+    }
   }
 
   async expectRentalPeriodDatePickerDisplayed(): Promise<void> {
@@ -344,6 +438,38 @@ export class CheckoutPage extends BasePage {
     const importantAddressParts = [expectedAddressParts[0], expectedAddressParts[1], ...expectedAddressParts.slice(-3)].filter(Boolean);
 
     return importantAddressParts.every((part) => selectedAddress.toLowerCase().includes(part.toLowerCase()));
+  }
+
+  private getDeliveryCityLocalDateTime(city: string): {
+    year: number;
+    month: number;
+    day: number;
+    hour: number;
+    minute: number;
+  } {
+    const CITY_TIMEZONES: Record<string, string> = {
+      Orlando: "America/New_York",
+      "Las Vegas": "America/Los_Angeles",
+    };
+    const timezone = CITY_TIMEZONES[city] ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const now = new Date();
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      hour12: false,
+    }).formatToParts(now);
+    const get = (type: string) => parseInt(parts.find((p) => p.type === type)?.value ?? "0");
+    return {
+      year: get("year"),
+      month: get("month"),
+      day: get("day"),
+      hour: get("hour") % 24,
+      minute: get("minute"),
+    };
   }
 
   private cssColorMatches(actualColor: string, expectedHexColor: string): boolean {

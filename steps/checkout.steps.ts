@@ -176,3 +176,21 @@ Then("the date picker should be displayed", async function (this: CustomWorld) {
 
   await checkoutPage.expectDatePickerDisplayed();
 });
+
+Then("past dates should be displayed as disabled in the date picker", async function (this: CustomWorld) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  await checkoutPage.expectPastDatesDisabledInDatePicker();
+});
+
+Then("today's date should reflect the 4 PM same-day cutoff for {string}", async function (this: CustomWorld, city: string) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  await checkoutPage.expectTodayCutoffRuleForCity(city);
+});
+
+Then("future dates should be enabled in the date picker", async function (this: CustomWorld) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  await checkoutPage.expectFutureDatesEnabledInDatePicker();
+});
