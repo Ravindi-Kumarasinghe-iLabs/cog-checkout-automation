@@ -73,7 +73,6 @@ fs.mkdirSync(jsonDir, { recursive: true });
 fs.mkdirSync(htmlDir, { recursive: true });
 
 const results = [];
-const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 
 console.log(`\nRunning suite: ${suiteName}`);
 console.log(`Report directory: ${suiteReportDir}\n`);
@@ -86,7 +85,7 @@ for (const scriptName of suites[suiteName]) {
 
   console.log(`\n========== START ${scriptName} ==========`);
 
-  const result = spawnSync(npmCommand, ["run", scriptName], {
+  const result = runNpmScript(scriptName, {
     cwd: process.cwd(),
     env: {
       ...process.env,
@@ -99,12 +98,18 @@ for (const scriptName of suites[suiteName]) {
   const durationMs = Date.now() - startedAt;
   const summary = readCucumberSummary(jsonReport);
   const status = result.status === 0 ? "passed" : "failed";
+  const commandError = result.error ? String(result.error) : "";
+
+  if (commandError) {
+    console.error(`Unable to start ${scriptName}: ${commandError}`);
+  }
 
   results.push({
     scriptName,
     status,
     exitCode: result.status,
     signal: result.signal,
+    commandError,
     durationMs,
     jsonReport,
     htmlReport,
@@ -136,6 +141,14 @@ process.exit(failedResults.length > 0 ? 1 : 0);
 
 function expandScripts(baseScripts, browsers) {
   return baseScripts.flatMap((scriptName) => browsers.map((browser) => `${scriptName}:${browser}`));
+}
+
+function runNpmScript(scriptName, options) {
+  if (process.platform === "win32") {
+    return spawnSync("cmd.exe", ["/d", "/s", "/c", `npm run ${scriptName}`], options);
+  }
+
+  return spawnSync("npm", ["run", scriptName], options);
 }
 
 function readCucumberSummary(jsonReport) {
@@ -185,6 +198,12 @@ function writeSuiteSummary(suiteReportDir, suiteName, results) {
         `${Math.round(result.durationMs / 1000)}s`,
       ].join(" | "),
     ),
+    "",
+    "## Command Errors",
+    "",
+    ...results
+      .filter((result) => result.commandError)
+      .map((result) => `- ${result.scriptName}: ${result.commandError}`),
     "",
     "## Report Files",
     "",
