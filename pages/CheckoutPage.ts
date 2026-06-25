@@ -717,45 +717,22 @@ export class CheckoutPage extends BasePage {
     await this.deliveryAddressInput.focus();
     await this.page.keyboard.type(value, { delay: ADDRESS_TYPING_DELAY_MS });
     await this.clickOutsideDeliveryAddressField();
-    await this.clickOutsideAgainIfAutocompleteDropdownIsVisible();
+    await this.closeAutocompleteDropdownAndBlurDeliveryAddress();
   }
 
   async expectDeliveryAddressDropdownSelectionValidation(): Promise<void> {
-    if (testEnv.testEnvironment === "browserstack") {
-      await this.expectDeliveryAddressDropdownSelectionValidationForBrowserStack();
-      return;
-    }
-
-    await expect(this.deliveryAddressDropdownValidationMessage).toBeVisible({ timeout: getActiveTimeoutMs() });
-    await expect(this.deliveryAddressHelpText).not.toBeVisible();
-
-    const validationColor = await this.deliveryAddressDropdownValidationMessage.evaluate((element) => getComputedStyle(element).color);
-    const inputBorderColor = await this.deliveryAddressInput.evaluate((element) => getComputedStyle(element).borderColor);
-
-    expect(this.cssColorMatches(validationColor, "#FFA500")).toBe(true);
-    expect(this.cssColorMatches(inputBorderColor, "#b94a48")).toBe(true);
+    await this.waitForDeliveryAddressValidationState("Select a delivery address from the dropdown", "#FFA500");
   }
 
   async focusEmptyDeliveryAddressAndBlur(): Promise<void> {
     await this.deliveryAddressInput.click();
     await this.deliveryAddressInput.fill("");
     await this.clickOutsideDeliveryAddressField();
+    await this.blurDeliveryAddressInput();
   }
 
   async expectDeliveryAddressRequiredValidation(): Promise<void> {
-    if (testEnv.testEnvironment === "browserstack") {
-      await this.expectDeliveryAddressRequiredValidationForBrowserStack();
-      return;
-    }
-
-    await expect(this.deliveryAddressRequiredValidationMessage).toBeVisible({ timeout: getActiveTimeoutMs() });
-    await expect(this.deliveryAddressHelpText).not.toBeVisible();
-
-    const validationColor = await this.deliveryAddressRequiredValidationMessage.evaluate((element) => getComputedStyle(element).color);
-    const inputBorderColor = await this.deliveryAddressInput.evaluate((element) => getComputedStyle(element).borderColor);
-
-    expect(this.cssColorMatches(validationColor, "#D0151F")).toBe(true);
-    expect(this.cssColorMatches(inputBorderColor, "#b94a48")).toBe(true);
+    await this.waitForDeliveryAddressValidationState("A valid delivery address is required.", "#D0151F");
   }
 
   private async typeAddressUntilSuggestionLoads(address: string, addressInput: Locator): Promise<"Google" | "Cloud maps"> {
@@ -973,18 +950,24 @@ export class CheckoutPage extends BasePage {
   }
 
   private async clickOutsideDeliveryAddressField(): Promise<void> {
-    const inputBox = await this.deliveryAddressInput.boundingBox();
+    const cartPanelBox = await this.cartPanel.boundingBox();
 
-    if (inputBox) {
-      const viewport = this.page.viewportSize();
-      const clickX = Math.min(inputBox.x + inputBox.width + 40, (viewport?.width ?? inputBox.x + inputBox.width + 40) - 20);
-      const clickY = inputBox.y + inputBox.height / 2;
+    if (cartPanelBox) {
+      await this.page.mouse.click(cartPanelBox.x + 20, cartPanelBox.y + 20);
+      await this.blurDeliveryAddressInput();
+      return;
+    }
 
-      await this.page.mouse.click(clickX, clickY);
+    const detailPanelBox = await this.detailPanel.boundingBox();
+
+    if (detailPanelBox) {
+      await this.page.mouse.click(detailPanelBox.x + 20, detailPanelBox.y + Math.max(detailPanelBox.height - 20, 20));
+      await this.blurDeliveryAddressInput();
       return;
     }
 
     await this.detailPanel.click({ position: { x: 10, y: 10 }, timeout: getActiveTimeoutMs() });
+    await this.blurDeliveryAddressInput();
   }
 
   private async waitForAutocompleteDropdownToClose(): Promise<void> {
@@ -1009,15 +992,39 @@ export class CheckoutPage extends BasePage {
       });
   }
 
-  private async clickOutsideAgainIfAutocompleteDropdownIsVisible(): Promise<void> {
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      if (!(await this.isAutocompleteDropdownVisible())) {
+  private async closeAutocompleteDropdownAndBlurDeliveryAddress(): Promise<void> {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      if (await this.isDeliveryAddressDropdownValidationVisible()) {
         return;
       }
 
+      if (!(await this.isAutocompleteDropdownVisible())) {
+        await this.blurDeliveryAddressInput();
+        await this.page.waitForTimeout(500);
+        continue;
+      }
+
+      await this.page.keyboard.press("Escape").catch(() => undefined);
       await this.clickOutsideDeliveryAddressField();
+      await this.blurDeliveryAddressInput();
       await this.waitForAutocompleteDropdownToClose();
+      await this.page.waitForTimeout(500);
     }
+  }
+
+  private async blurDeliveryAddressInput(): Promise<void> {
+    await this.deliveryAddressInput
+      .evaluate((element) => {
+        element.blur();
+      })
+      .catch(() => undefined);
+  }
+
+  private async isDeliveryAddressDropdownValidationVisible(): Promise<boolean> {
+    return this.deliveryAddressDropdownValidationMessage
+      .first()
+      .isVisible({ timeout: 1000 })
+      .catch(() => false);
   }
 
   private async isAutocompleteDropdownVisible(): Promise<boolean> {
@@ -1034,9 +1041,143 @@ export class CheckoutPage extends BasePage {
     });
   }
 
+  private async waitForDeliveryAddressValidationState(message: string, expectedValidationColor: string): Promise<void> {
+    await this.page.waitForFunction(
+      ({ message, expectedValidationColor }) => {
+        const normalizeCssColor = (color: string): string => {
+          if (color.startsWith("#")) {
+            const hex = color.replace("#", "");
+            const red = Number.parseInt(hex.slice(0, 2), 16);
+            const green = Number.parseInt(hex.slice(2, 4), 16);
+            const blue = Number.parseInt(hex.slice(4, 6), 16);
+
+            return `${red},${green},${blue}`;
+          }
+
+          if (color.startsWith("color(srgb")) {
+            const srgbValues = color.match(/-?\d+(\.\d+)?/g)?.slice(0, 3) ?? [];
+
+            return srgbValues.map((value) => String(Math.round(Number(value) * 255))).join(",");
+          }
+
+          const rgbValues = color.match(/\d+(\.\d+)?/g)?.slice(0, 3) ?? [];
+
+          return rgbValues.map((value) => String(Math.round(Number(value)))).join(",");
+        };
+
+        const isVisible = (element: HTMLElement | undefined): boolean => {
+          if (!element) {
+            return false;
+          }
+
+          const styles = getComputedStyle(element);
+          const rect = element.getBoundingClientRect();
+
+          return styles.display !== "none" && styles.visibility !== "hidden" && Number(styles.opacity) !== 0 && rect.width > 0 && rect.height > 0;
+        };
+
+        const findLeafElementByText = (text: string): HTMLElement | undefined => {
+          const elements = Array.from(document.querySelectorAll<HTMLElement>("#detail-panel *"));
+
+          return elements.find((element) => {
+            const containsText = element.textContent?.includes(text) ?? false;
+            const childContainsText = Array.from(element.children).some((child) => child.textContent?.includes(text));
+
+            return containsText && !childContainsText;
+          });
+        };
+
+        const validationElement = findLeafElementByText(message);
+        const helpElement = findLeafElementByText("Delivery address not sure?");
+        const inputElement = document.querySelector<HTMLInputElement>("#delivery_location");
+        const validationColor = validationElement ? getComputedStyle(validationElement).color : "";
+        const inputBorderColor = inputElement ? getComputedStyle(inputElement).borderColor : "";
+
+        return (
+          isVisible(validationElement) &&
+          !isVisible(helpElement) &&
+          normalizeCssColor(validationColor) === normalizeCssColor(expectedValidationColor) &&
+          normalizeCssColor(inputBorderColor) === normalizeCssColor("#b94a48")
+        );
+      },
+      { message, expectedValidationColor },
+      { timeout: getActiveTimeoutMs() },
+    );
+
+    const validationState = await this.page.evaluate((message: string) => {
+      const findLeafElementByText = (text: string): HTMLElement | undefined => {
+        const elements = Array.from(document.querySelectorAll<HTMLElement>("#detail-panel *"));
+
+        return elements.find((element) => {
+          const containsText = element.textContent?.includes(text) ?? false;
+          const childContainsText = Array.from(element.children).some((child) => child.textContent?.includes(text));
+
+          return containsText && !childContainsText;
+        });
+      };
+      const validationElement = findLeafElementByText(message);
+      const helpElement = findLeafElementByText("Delivery address not sure?");
+      const inputElement = document.querySelector<HTMLInputElement>("#delivery_location");
+
+      return {
+        validationVisible: Boolean(validationElement && validationElement.getBoundingClientRect().width > 0 && validationElement.getBoundingClientRect().height > 0),
+        validationColor: validationElement ? getComputedStyle(validationElement).color : "",
+        helpVisible: Boolean(helpElement && helpElement.getBoundingClientRect().width > 0 && helpElement.getBoundingClientRect().height > 0),
+        inputBorderColor: inputElement ? getComputedStyle(inputElement).borderColor : "",
+      };
+    }, message);
+
+    expect(validationState.validationVisible).toBe(true);
+    expect(validationState.helpVisible).toBe(false);
+    expect(this.cssColorMatches(validationState.validationColor, expectedValidationColor)).toBe(true);
+    expect(this.cssColorMatches(validationState.inputBorderColor, "#b94a48")).toBe(true);
+  }
+
   private async expectDeliveryAddressDropdownSelectionValidationForBrowserStack(): Promise<void> {
     await this.page.waitForFunction(
-      () => document.body.textContent?.includes("Select a delivery address from the dropdown"),
+      () => {
+        const normalizeCssColor = (color: string): string => {
+          const hexMatch = color.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
+
+          if (hexMatch) {
+            return `rgb(${parseInt(hexMatch[1], 16)}, ${parseInt(hexMatch[2], 16)}, ${parseInt(hexMatch[3], 16)})`;
+          }
+
+          const rgbMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+
+          if (rgbMatch) {
+            return `rgb(${rgbMatch[1]}, ${rgbMatch[2]}, ${rgbMatch[3]})`;
+          }
+
+          return color.toLowerCase().trim();
+        };
+
+      const findLeafElementByText = (text: string): HTMLElement | undefined => {
+        const elements = Array.from(document.querySelectorAll<HTMLElement>("#detail-panel *"));
+
+        return elements.find((element) => {
+          const containsText = element.textContent?.includes(text) ?? false;
+          const childContainsText = Array.from(element.children).some((child) => child.textContent?.includes(text));
+
+          return containsText && !childContainsText;
+        });
+      };
+      const validationElement = findLeafElementByText("Select a delivery address from the dropdown");
+      const helpElement = findLeafElementByText("Delivery address not sure?");
+      const inputElement = document.querySelector<HTMLInputElement>("#delivery_location");
+
+        const validationVisible = Boolean(validationElement && validationElement.offsetParent !== null);
+        const helpVisible = Boolean(helpElement && helpElement.offsetParent !== null);
+        const validationColor = validationElement ? getComputedStyle(validationElement).color : "";
+        const inputBorderColor = inputElement ? getComputedStyle(inputElement).borderColor : "";
+
+        return (
+          validationVisible &&
+          !helpVisible &&
+          normalizeCssColor(validationColor) === "rgb(255, 165, 0)" &&
+          normalizeCssColor(inputBorderColor) === "rgb(185, 74, 72)"
+        );
+      },
       undefined,
       { timeout: getActiveTimeoutMs() },
     );
@@ -1072,7 +1213,49 @@ export class CheckoutPage extends BasePage {
 
   private async expectDeliveryAddressRequiredValidationForBrowserStack(): Promise<void> {
     await this.page.waitForFunction(
-      () => document.body.textContent?.includes("A valid delivery address is required."),
+      () => {
+        const normalizeCssColor = (color: string): string => {
+          const hexMatch = color.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
+
+          if (hexMatch) {
+            return `rgb(${parseInt(hexMatch[1], 16)}, ${parseInt(hexMatch[2], 16)}, ${parseInt(hexMatch[3], 16)})`;
+          }
+
+          const rgbMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+
+          if (rgbMatch) {
+            return `rgb(${rgbMatch[1]}, ${rgbMatch[2]}, ${rgbMatch[3]})`;
+          }
+
+          return color.toLowerCase().trim();
+        };
+
+        const findLeafElementByText = (text: string): HTMLElement | undefined => {
+          const elements = Array.from(document.querySelectorAll<HTMLElement>("#detail-panel *"));
+
+          return elements.find((element) => {
+            const containsText = element.textContent?.includes(text) ?? false;
+            const childContainsText = Array.from(element.children).some((child) => child.textContent?.includes(text));
+
+            return containsText && !childContainsText;
+          });
+        };
+        const validationElement = findLeafElementByText("A valid delivery address is required.");
+        const helpElement = findLeafElementByText("Delivery address not sure?");
+        const inputElement = document.querySelector<HTMLInputElement>("#delivery_location");
+
+        const validationVisible = Boolean(validationElement && validationElement.offsetParent !== null);
+        const helpVisible = Boolean(helpElement && helpElement.offsetParent !== null);
+        const validationColor = validationElement ? getComputedStyle(validationElement).color : "";
+        const inputBorderColor = inputElement ? getComputedStyle(inputElement).borderColor : "";
+
+        return (
+          validationVisible &&
+          !helpVisible &&
+          normalizeCssColor(validationColor) === "rgb(208, 21, 31)" &&
+          normalizeCssColor(inputBorderColor) === "rgb(185, 74, 72)"
+        );
+      },
       undefined,
       { timeout: getActiveTimeoutMs() },
     );

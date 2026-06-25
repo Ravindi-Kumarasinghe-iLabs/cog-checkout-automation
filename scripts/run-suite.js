@@ -53,6 +53,8 @@ const suites = {
   "pickup-addresses:all-headed": expandScripts(pickupAddressTests, localBrowsers),
   "pickup-addresses:bs:all": expandScripts(pickupAddressTests, browserStackBrowsers),
   "checkout:all-headed": expandScripts(checkoutTests, localBrowsers),
+  "checkout:bs:chrome-desktop": expandScripts(checkoutTests.filter((script) => script !== "test:product-cart"), ["bs:chrome-desktop"]),
+  "checkout:bs:safari-desktop": expandScripts(checkoutTests.filter((script) => script !== "test:product-cart"), ["bs:safari-desktop"]),
   "checkout:bs:all": expandScripts(checkoutTests.filter((script) => script !== "test:product-cart"), browserStackBrowsers),
 };
 
