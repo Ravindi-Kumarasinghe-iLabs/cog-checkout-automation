@@ -1,8 +1,15 @@
 import { After, Before, setDefaultTimeout, Status } from "@cucumber/cucumber";
-import { chromium, devices, firefox, webkit, type BrowserType } from "playwright";
+import { chromium, devices, firefox, webkit, type BrowserContextOptions, type BrowserType } from "playwright";
 import { getActiveTimeoutMs, testEnv } from "./env";
 import type { CustomWorld } from "./world";
 import { getBrowserStackWsEndpoint } from "../utils/browserStackCaps";
+
+const DESKTOP_CONTEXT_OPTIONS: BrowserContextOptions = {
+  viewport: {
+    width: 1440,
+    height: 900,
+  },
+};
 
 const browserTypes: Record<string, BrowserType> = {
   chromium,
@@ -10,16 +17,76 @@ const browserTypes: Record<string, BrowserType> = {
   webkit,
 };
 
+const getLocalBrowserProfile = (): string => {
+  const explicitProfile = process.env.BROWSER_PROFILE ?? process.env.BROWSERSTACK_PROFILE;
+
+  if (explicitProfile) {
+    return explicitProfile;
+  }
+
+  if (testEnv.device === "mobile") {
+    return testEnv.browser === "webkit" ? "safari-mobile" : "chrome-mobile";
+  }
+
+  return testEnv.browser === "webkit" ? "safari-desktop" : "chrome-desktop";
+};
+
+const getLocalBrowserType = (profile: string): BrowserType => {
+  if (profile === "safari-mobile" || profile === "safari-desktop") {
+    return webkit;
+  }
+
+  if (profile === "chrome-mobile" || profile === "chrome-desktop") {
+    return chromium;
+  }
+
+  return browserTypes[testEnv.browser] ?? chromium;
+};
+
+const getLocalContextOptions = (profile: string): BrowserContextOptions => {
+  if (profile === "safari-mobile") {
+    const iPhone14 = devices["iPhone 14"];
+
+    return {
+      viewport: {
+        width: 390,
+        height: 844,
+      },
+      isMobile: true,
+      hasTouch: true,
+      deviceScaleFactor: 1,
+      userAgent: iPhone14.userAgent,
+    };
+  }
+
+  if (profile === "chrome-mobile") {
+    const pixel7 = devices["Pixel 7"];
+
+    return {
+      viewport: {
+        width: 412,
+        height: 915,
+      },
+      isMobile: true,
+      hasTouch: true,
+      deviceScaleFactor: 1,
+      userAgent: pixel7.userAgent,
+    };
+  }
+
+  return DESKTOP_CONTEXT_OPTIONS;
+};
+
 setDefaultTimeout(getActiveTimeoutMs());
 
 Before(async function (this: CustomWorld, scenario) {
-  const browserType = browserTypes[testEnv.browser] ?? chromium;
+  const localProfile = getLocalBrowserProfile();
+  const browserType = getLocalBrowserType(localProfile);
   const launchOptions = {
     headless: testEnv.headless,
     channel: testEnv.browserChannel,
   };
-  const mobileDevice = testEnv.browser === "webkit" ? devices["iPhone 15 Pro Max"] : devices["Pixel 5"];
-  const contextOptions = testEnv.testEnvironment === "browserstack" ? {} : testEnv.device === "mobile" ? mobileDevice : {};
+  const contextOptions = getLocalContextOptions(localProfile);
 
   this.browser =
     testEnv.testEnvironment === "browserstack"
@@ -32,6 +99,18 @@ Before(async function (this: CustomWorld, scenario) {
   } else {
     this.context = await this.browser.newContext(contextOptions);
     this.page = await this.context.newPage();
+
+    if (localProfile === "safari-mobile" || localProfile === "chrome-mobile") {
+      const mobileDebugInfo = await this.page.evaluate(() => ({
+        innerWidth: window.innerWidth,
+        innerHeight: window.innerHeight,
+        devicePixelRatio: window.devicePixelRatio,
+        userAgent: navigator.userAgent,
+        visualViewportScale: window.visualViewport?.scale,
+      }));
+
+      console.log("Mobile debug info:", mobileDebugInfo);
+    }
   }
 
   this.page.setDefaultTimeout(getActiveTimeoutMs());

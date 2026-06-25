@@ -3,7 +3,11 @@ module.exports = {
     requireModule: ["ts-node/register"],
     require: ["support/**/*.ts", "steps/**/*.ts"],
     paths: ["features/**/*.feature"],
-    format: ["progress", "html:reports/cucumber-report.html", "json:reports/cucumber-report.json"],
+    format: [
+      "progress",
+      `html:${process.env.CUCUMBER_HTML_REPORT ?? "reports/cucumber-report.html"}`,
+      `json:${process.env.CUCUMBER_JSON_REPORT ?? "reports/cucumber-report.json"}`,
+    ],
     parallel: 1,
     forceExit: true,
     publishQuiet: true,
@@ -21,6 +25,24 @@ module.exports = {
   },
   deliveryAddress: {
     tags: "@DA-001",
+  },
+  pickupAddress: {
+    tags: "@PA-001",
+  },
+  pickupAddressCityMismatch: {
+    tags: "@PA-002",
+  },
+  pickupLocalityAddress: {
+    tags: "@PA-003",
+  },
+  pickupAirportAddress: {
+    tags: "@PA-004",
+  },
+  pickupAttractionAddress: {
+    tags: "@PA-005",
+  },
+  pickupBlacklistedHotelAddress: {
+    tags: "@PA-006",
   },
   airportDeliveryAddress: {
     tags: "@DA-002",

@@ -131,6 +131,49 @@ Then("the delivery address {string} should be selected successfully", async func
   await checkoutPage.expectDeliveryAddressSelected(address);
 });
 
+Then("the use same address checkbox should be displayed", async function (this: CustomWorld) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  await checkoutPage.expectUseSameAddressCheckboxDisplayed();
+});
+
+When("I uncheck the use same address checkbox", async function (this: CustomWorld) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  await checkoutPage.uncheckUseSameAddressForBoth();
+});
+
+Then("the pickup address field should be displayed", async function (this: CustomWorld) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  await checkoutPage.expectPickupAddressFieldDisplayed();
+});
+
+When("I enter and select {string} as the pickup address", async function (this: CustomWorld, address: string) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  const mapProvider = await checkoutPage.enterAndSelectPickupAddress(address);
+  await this.attach(`Pickup address map dropdown loaded from: ${mapProvider}`, "text/plain");
+});
+
+Then("the pickup address {string} should be selected successfully", async function (this: CustomWorld, address: string) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  await checkoutPage.expectPickupAddressSelected(address);
+});
+
+Then("both delivery and pickup address fields should validate without errors", async function (this: CustomWorld) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  await checkoutPage.expectDeliveryAndPickupAddressValidationSuccessful();
+});
+
+Then("the pickup city mismatch validation should be displayed", async function (this: CustomWorld) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  await checkoutPage.expectPickupCityMismatchValidation();
+});
+
 Then("the rental period date picker should be displayed", async function (this: CustomWorld) {
   const checkoutPage = new CheckoutPage(this.page);
 
