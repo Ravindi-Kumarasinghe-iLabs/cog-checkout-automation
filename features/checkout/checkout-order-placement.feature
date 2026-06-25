@@ -220,6 +220,24 @@ Feature: Cloud of Goods checkout order placement
     Then the Cloud of Goods home page should be displayed
     And the cart should indicate the rental item was abandoned
 
+  @checkout @navigationAndCart @NV-002
+  Scenario: NV-002 Verify the user is redirected to the relevant product page when clicking the item image in the cart panel
+    Given I open the checkout page with Lightweight Mobility Scooter in the cart
+    When I click the cart item image in the cart panel
+    Then the user should be redirected to the Lightweight Mobility Scooter product page
+
+  @checkout @navigationAndCart @NV-003
+  Scenario: NV-003 Verify the user is redirected to the relevant product page when clicking the item name in the cart panel
+    Given I open the checkout page with Lightweight Mobility Scooter in the cart
+    When I click the cart item name in the cart panel
+    Then the user should be redirected to the Lightweight Mobility Scooter product page
+
+  @checkout @navigationAndCart @NV-004
+  Scenario: NV-004 Verify the user is redirected to the Explore page when clicking the close icon on the checkout page
+    Given I open the checkout page with Lightweight Mobility Scooter in the cart
+    When I click the close icon on the cart item
+    Then the user should be redirected to the Explore page
+
   @checkout @delivery-address @DA-004
   Scenario: DA-004 Verify user can enter and select a valid blacklisted hotel delivery address successfully
     Given I open the checkout page with Lightweight Mobility Scooter in the cart
