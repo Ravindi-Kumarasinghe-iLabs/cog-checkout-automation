@@ -7,6 +7,7 @@ export class CustomWorld extends World {
   page!: Page;
   selectedStartDate?: string;
   selectedEndDate?: string;
+  navigatedProductUrl?: string;
 
   constructor(options: IWorldOptions) {
     super(options);

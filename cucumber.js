@@ -92,6 +92,15 @@ module.exports = {
   navigationLogo: {
     tags: "@NV-001",
   },
+  navigationCartItem: {
+    tags: "@NV-002",
+  },
+  navigationCartItemName: {
+    tags: "@NV-003",
+  },
+  navigationCloseIcon: {
+    tags: "@NV-004",
+  },
   changeRentalPeriod: {
     tags: "@RP-010",
   },

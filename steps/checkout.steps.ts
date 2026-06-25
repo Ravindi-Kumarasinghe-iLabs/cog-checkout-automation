@@ -1,4 +1,5 @@
 import { Given, Then, When } from "@cucumber/cucumber";
+import { expect } from "@playwright/test";
 import { CheckoutPage } from "../pages/CheckoutPage";
 import { HomePage } from "../pages/HomePage";
 import { ProductPage } from "../pages/ProductPage";
@@ -27,6 +28,34 @@ Given("I open the Cloud of Goods staging home page", async function (this: Custo
 
 Given("I open the checkout page with Lightweight Mobility Scooter in the cart", async function (this: CustomWorld) {
   await openCheckoutWithLightweightMobilityScooter(this);
+});
+
+When("I click the close icon on the cart item", async function (this: CustomWorld) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  await checkoutPage.clickCartItemCloseIcon();
+});
+
+Then("the user should be redirected to the Explore page", async function (this: CustomWorld) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  await checkoutPage.expectExplorePage();
+});
+
+When("I click the cart item name in the cart panel", async function (this: CustomWorld) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  this.navigatedProductUrl = await checkoutPage.clickCartItemName();
+});
+
+When("I click the cart item image in the cart panel", async function (this: CustomWorld) {
+  const checkoutPage = new CheckoutPage(this.page);
+
+  this.navigatedProductUrl = await checkoutPage.clickCartItemImage();
+});
+
+Then("the user should be redirected to the Lightweight Mobility Scooter product page", async function (this: CustomWorld) {
+  expect(this.navigatedProductUrl).toMatch(/\/mobility-rentals\/lightweight-mobility-scooter/i);
 });
 
 When("I click the Cloud of Goods logo in the checkout page header", async function (this: CustomWorld) {

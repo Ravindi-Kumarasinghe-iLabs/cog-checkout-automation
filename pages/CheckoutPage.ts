@@ -34,6 +34,72 @@ export class CheckoutPage extends BasePage {
   });
   private readonly rentalPeriodCalendarIcon = this.detailPanel.locator(".input-group-addon");
 
+  async clickCartItemCloseIcon(): Promise<void> {
+    const closeIcon = this.page.locator("#cart-panel .close-cross").first();
+    if (testEnv.testEnvironment === "browserstack") {
+      await closeIcon.waitFor({ state: "visible", timeout: Math.min(getActiveTimeoutMs(), 30000) });
+      await Promise.all([
+        this.page.waitForURL(/product-rentals\/all/, { timeout: Math.min(getActiveTimeoutMs(), 30000) }),
+        closeIcon.click({ force: true }),
+      ]);
+      return;
+    }
+    await Promise.all([
+      this.page.waitForURL(/product-rentals\/all/, { timeout: getActiveTimeoutMs() }),
+      closeIcon.click(),
+    ]);
+  }
+
+  async expectExplorePage(): Promise<void> {
+    if (testEnv.testEnvironment === "browserstack") {
+      await this.page.waitForFunction(
+        () => window.location.href.includes("/product-rentals/all"),
+        undefined,
+        { timeout: Math.min(getActiveTimeoutMs(), 30000) },
+      );
+      return;
+    }
+    await expect(this.page).toHaveURL(/product-rentals\/all/, { timeout: getActiveTimeoutMs() });
+  }
+
+  async clickCartItemName(): Promise<string> {
+    if (testEnv.testEnvironment === "browserstack") {
+      // Safari opens target="_blank" in a new window (new context) — capture href and navigate directly
+      const parentLink = this.page.locator("#cart-panel .media-body a").first();
+      await parentLink.waitFor({ state: "visible", timeout: Math.min(getActiveTimeoutMs(), 30000) });
+      const href = await parentLink.getAttribute("href", { timeout: Math.min(getActiveTimeoutMs(), 30000) });
+      await this.page.goto(href ?? "", { waitUntil: "domcontentloaded", timeout: Math.min(getActiveTimeoutMs(), 30000) });
+      return this.page.url();
+    }
+
+    const cartItemName = this.page.locator("#cart-panel .media-body .itm-head").first();
+    const [popup] = await Promise.all([
+      this.page.context().waitForEvent("page", { timeout: Math.min(getActiveTimeoutMs(), 30000) }),
+      cartItemName.click({ force: true }),
+    ]);
+    await popup.waitForLoadState("domcontentloaded", { timeout: Math.min(getActiveTimeoutMs(), 30000) });
+    return popup.url();
+  }
+
+  async clickCartItemImage(): Promise<string> {
+    if (testEnv.testEnvironment === "browserstack") {
+      // Safari opens target="_blank" in a new window (new context) — capture href and navigate directly
+      const parentLink = this.page.locator("#cart-panel .media-left a").first();
+      await parentLink.waitFor({ state: "visible", timeout: Math.min(getActiveTimeoutMs(), 30000) });
+      const href = await parentLink.getAttribute("href", { timeout: Math.min(getActiveTimeoutMs(), 30000) });
+      await this.page.goto(href ?? "", { waitUntil: "domcontentloaded", timeout: Math.min(getActiveTimeoutMs(), 30000) });
+      return this.page.url();
+    }
+
+    const cartImage = this.page.locator("#cart-panel .media-left img").first();
+    const [popup] = await Promise.all([
+      this.page.context().waitForEvent("page", { timeout: Math.min(getActiveTimeoutMs(), 30000) }),
+      cartImage.click({ force: true }),
+    ]);
+    await popup.waitForLoadState("domcontentloaded", { timeout: Math.min(getActiveTimeoutMs(), 30000) });
+    return popup.url();
+  }
+
   async clickLogo(): Promise<void> {
     const logo = this.page.locator("#cogLogo-blue");
     if (testEnv.testEnvironment === "browserstack") {
