@@ -39,6 +39,9 @@ const checkoutTests = [
   "test:different-future-dates-rental",
   "test:change-rental-period",
   "test:navigation-logo",
+  "test:navigation-cart-item",
+  "test:navigation-cart-item-name",
+  "test:navigation-close-icon",
 ];
 
 const localBrowsers = ["chrome-desktop", "chrome-mobile", "safari-desktop", "safari-mobile"];
