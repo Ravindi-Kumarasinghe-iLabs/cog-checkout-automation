@@ -1133,11 +1133,28 @@ export class CheckoutPage extends BasePage {
   private async expectBrowserStackTextInDetail(selector: string, expectedText: RegExp): Promise<void> {
     await this.waitForBrowserStackSelector(selector);
 
-    const text = await this.page
-      .locator(selector)
-      .first()
-      .innerText({ timeout: Math.min(getActiveTimeoutMs(), 30000) })
-      .catch(() => "");
+    const textMatches = await this.page
+      .waitForFunction(
+        ({ targetSelector, pattern, flags }: { targetSelector: string; pattern: string; flags: string }) => {
+          const text = document.querySelector(targetSelector)?.textContent ?? "";
+
+          return new RegExp(pattern, flags).test(text);
+        },
+        {
+          targetSelector: selector,
+          pattern: expectedText.source,
+          flags: expectedText.flags,
+        },
+        { timeout: getActiveTimeoutMs() },
+      )
+      .then(() => true)
+      .catch(() => false);
+
+    if (textMatches) {
+      return;
+    }
+
+    const text = await this.page.locator(selector).first().innerText({ timeout: Math.min(getActiveTimeoutMs(), 30000) }).catch(() => "");
 
     expect(text).toMatch(expectedText);
   }
