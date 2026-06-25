@@ -286,7 +286,6 @@
     "test:navigation-close-icon:bs:chrome-desktop": "cross-env TEST_ENV=browserstack BROWSERSTACK_PROFILE=chrome-desktop cucumber-js --profile default --profile navigationCloseIcon --profile browserStack",
     "test:navigation-close-icon:bs:safari-desktop": "cross-env TEST_ENV=browserstack BROWSERSTACK_PROFILE=safari-desktop cucumber-js --profile default --profile navigationCloseIcon --profile browserStack",
     "test:navigation-close-icon:bs:all": "npm run test:navigation-close-icon:bs:chrome-desktop && npm run test:navigation-close-icon:bs:safari-desktop",
-    "test:checkout:bs:all": "npm run test:delivery-addresses:bs:all && npm run test:rental-period:bs:all && npm run test:rental-period-date-picker:bs:all && npm run test:rental-period-calendar-icon:bs:all && npm run test:past-dates-disabled:bs:all && npm run test:single-day-rental:bs:all && npm run test:double-tap-single-day-rental:bs:all && npm run test:future-end-date-rental:bs:all && npm run test:same-future-date-rental:bs:all && npm run test:different-future-dates-rental:bs:all && npm run test:change-rental-period:bs:all && npm run test:navigation-logo:bs:all && npm run test:navigation-cart-item:bs:all && npm run test:navigation-cart-item-name:bs:all && npm run test:navigation-close-icon:bs:all",
     "test:checkout:all-headed": "node scripts/run-suite.js checkout:all-headed",
     "test:checkout:bs:all": "node scripts/run-suite.js checkout:bs:all",
     "test:all-headed": "npm run test:checkout:all-headed",
