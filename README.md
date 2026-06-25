@@ -279,6 +279,33 @@ reports/cucumber-report.html
 reports/cucumber-report.json
 ```
 
+When running a grouped suite, such as pickup address tests or the full checkout suite, the runner continues to the next test even if one test fails or times out. It writes a full suite report under:
+
+```text
+reports/suites/
+```
+
+Useful grouped commands:
+
+```cmd
+npm run test:pickup-addresses:all-headed
+npm run test:pickup-addresses:bs:all
+npm run test:all-headed
+npm run test:bs:all
+```
+
+Each suite run creates:
+
+```text
+reports/suites/<suite-run>/summary.md
+reports/suites/<suite-run>/summary.json
+reports/suites/<suite-run>/combined-html-report/index.html
+reports/suites/<suite-run>/html/
+reports/suites/<suite-run>/json/
+```
+
+The command exits with failure only after every test in the suite has finished running.
+
 ## Branch And Commit Workflow
 
 Create a feature branch:
